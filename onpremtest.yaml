@@ -1,0 +1,276 @@
+openapi: 3.0.3
+info:
+  title: 172.25.58.88:8443 - Reconstructed API surface
+  description: 'OpenAPI spec MoonSun'
+  version: 1.0.0
+  x-observed-ids:
+    orgId: 6a68df8e793f44109c3f2f6c
+    appId: 6a832657fe79c4b93a3804f1
+    exampleRunId: 6a88865d442ba0277bb14fdc
+    note: Context identifiers captured.
+servers:
+- url: https://172.99.99.88:8443
+paths:
+  /admin/datanets:
+    get:
+      tags:
+      - Admin
+      summary: Data networks (admin)
+      operationId: get_admin_datanets
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /admin/host_topology/json:
+    get:
+      tags:
+      - Admin
+      summary: Host topology (JSON)
+      operationId: get_admin_host_topology_json
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+      parameters:
+      - name: _
+        in: query
+        required: false
+        description: Cache-buster timestamp (dynamic key, e.g. 1786981713026=1)
+        schema:
+          type: string
+        example: '1786981713026'
+  /admin/software_management:
+    get:
+      tags:
+      - Admin
+      summary: Software management (admin)
+      operationId: get_admin_software_management
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /admin/software_management/releaseupload:
+    get:
+      tags:
+      - Admin
+      summary: Software release upload (admin)
+      operationId: get_admin_software_management_releaseupload
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /admin/storage_overview:
+    get:
+      tags:
+      - Admin
+      summary: Storage overview
+      operationId: get_admin_storage_overview
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+      parameters:
+      - name: loaded
+        in: query
+        required: false
+        description: UI tab-loaded flag observed in logs
+        schema:
+          type: string
+        example: '1'
+  /admin/system_config:
+    get:
+      tags:
+      - Admin
+      summary: System configuration (admin)
+      operationId: get_admin_system_config
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /api/fm/alarm_list:
+    get:
+      tags:
+      - Fault Management
+      summary: List alarms
+      operationId: get_api_fm_alarm_list
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /api/fm/event_log_list:
+    get:
+      tags:
+      - Fault Management
+      summary: List event log entries
+      operationId: get_api_fm_event_log_list
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /api/fm/events_suppression_list:
+    get:
+      tags:
+      - Fault Management
+      summary: List event suppressions
+      operationId: get_api_fm_events_suppression_list
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /api/keystone/roles:
+    get:
+      tags:
+      - Identity
+      summary: List Keystone roles
+      operationId: get_api_keystone_roles
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /api/policy:
+    post:
+      tags:
+      - Other
+      summary: Policy API
+      operationId: post_api_policy
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+      requestBody:
+        required: false
+        description: Request body not captured in logs (endpoint discovered via capability/ownership analysis;
+          scope unknown).
+        content:
+          application/json:
+            schema:
+              type: object
+  /api/settings:
+    get:
+      tags:
+      - API
+      summary: Application settings
+      operationId: get_api_settings
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /header:
+    get:
+      tags:
+      - Other
+      summary: UI header fragment
+      operationId: get_header
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /identity:
+    get:
+      tags:
+      - Identity
+      summary: Identity root / user list
+      operationId: get_identity
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /identity/create:
+    get:
+      tags:
+      - Identity
+      summary: Identity create page
+      operationId: get_identity_create
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /identity/groups:
+    get:
+      tags:
+      - Identity
+      summary: Identity groups list
+      operationId: get_identity_groups
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+  /identity/groups/create:
+    post:
+      tags:
+      - Identity
+      summary: Create identity group
+      operationId: post_identity_groups_create
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                csrfmiddlewaretoken:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+              description: Fields/values reflect requests captured in logs; required-ness is inferred
+                from observed traffic, not a published API contract.
+            example:
+              csrfmiddlewaretoken: <csrf-token>
+              name: West
+              description: Example group description
+  /identity/users/create:
+    post:
+      tags:
+      - Identity
+      summary: Create identity user
+      operationId: post_identity_users_create
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                csrfmiddlewaretoken:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                confirm_password:
+                  type: string
+                domain_id:
+                  type: string
+                domain_name:
+                  type: string
+                project:
+                  type: string
+                role_id:
+                  type: string
+                enabled:
+                  type: string
+                fake_email:
+                  type: string
+                fake_password:
+                  type: string
+              description: Fields/values reflect requests captured in logs; required-ness is inferred
+                from observed traffic, not a published API contract.
+            example:
+              csrfmiddlewaretoken: <csrf-token>
+              name: orchid
+              description: Example user description
+              email: abc1787332238925@example.com
+              password: <password>
+              confirm_password: <password>
+              domain_id: Cargo
+              domain_name: Genderqueer
+              project: ''
+              role_id: ''
+              enabled: 'true'
+              fake_email: ''
+              fake_password: ''
+  /project/api_access/view_credentials:
+    get:
+      tags:
+      - Project
+      summary: View API credentials
+      operationId: get_project_api_access_view_credentials
+      responses:
+        '200':
+          description: Observed in logs (probe/crawl). Response body not captured.
