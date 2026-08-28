@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: 172.25.58.88:8443 - Reconstructed API surface
+  title: OnPrem Test API
   description: 'OpenAPI spec MoonSun'
   version: 1.0.0
   x-observed-ids:
@@ -9,7 +9,11 @@ info:
     exampleRunId: 6a88865d442ba0277bb14fdc
     note: Context identifiers captured.
 servers:
-- url: https://172.99.99.88:8443
+- url: https://onprem-01yz.onrender.com
+security:
+- platformSessionCookie: []
+  csrfTokenHeader: []
+  requestedWithHeader: []
 paths:
   /admin/datanets:
     get:
@@ -17,9 +21,17 @@ paths:
       - Admin
       summary: Data networks (admin)
       operationId: get_admin_datanets
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/host_topology/json:
     get:
       tags:
@@ -29,7 +41,14 @@ paths:
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: _
         in: query
         required: false
@@ -43,18 +62,34 @@ paths:
       - Admin
       summary: Software management (admin)
       operationId: get_admin_software_management
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/software_management/releaseupload:
     get:
       tags:
       - Admin
       summary: Software release upload (admin)
       operationId: get_admin_software_management_releaseupload
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /admin/storage_overview:
     get:
       tags:
@@ -64,7 +99,14 @@ paths:
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -78,54 +120,102 @@ paths:
       - Admin
       summary: System configuration (admin)
       operationId: get_admin_system_config
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/fm/alarm_list:
     get:
       tags:
       - Fault Management
       summary: List alarms
       operationId: get_api_fm_alarm_list
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/fm/event_log_list:
     get:
       tags:
       - Fault Management
       summary: List event log entries
       operationId: get_api_fm_event_log_list
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/fm/events_suppression_list:
     get:
       tags:
       - Fault Management
       summary: List event suppressions
       operationId: get_api_fm_events_suppression_list
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/keystone/roles:
     get:
       tags:
       - Identity
       summary: List Keystone roles
       operationId: get_api_keystone_roles
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/policy:
     post:
       tags:
       - Other
       summary: Policy API
       operationId: post_api_policy
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       requestBody:
         required: false
         description: Request body not captured in logs (endpoint discovered via capability/ownership analysis;
@@ -140,54 +230,102 @@ paths:
       - API
       summary: Application settings
       operationId: get_api_settings
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /header:
     get:
       tags:
       - Other
       summary: UI header fragment
       operationId: get_header
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /identity:
     get:
       tags:
       - Identity
       summary: Identity root / user list
       operationId: get_identity
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /identity/create:
     get:
       tags:
       - Identity
       summary: Identity create page
       operationId: get_identity_create
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /identity/groups:
     get:
       tags:
       - Identity
       summary: Identity groups list
       operationId: get_identity_groups
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /identity/groups/create:
     post:
       tags:
       - Identity
       summary: Create identity group
       operationId: post_identity_groups_create
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       requestBody:
         required: true
         content:
@@ -213,9 +351,17 @@ paths:
       - Identity
       summary: Create identity user
       operationId: post_identity_users_create
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       requestBody:
         required: true
         content:
@@ -265,12 +411,264 @@ paths:
               enabled: 'true'
               fake_email: ''
               fake_password: ''
+  /login:
+    get:
+      tags:
+      - Authentication
+      summary: CSRF bootstrap
+      description: 'Issues the platformcsrftoken, login_region and login_domain cookies. No
+        session is required - this is the first call of the login flow, and its token is what
+        POST /login expects to see echoed back in the X-CSRFToken header.'
+      operationId: get_login
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: region
+        in: query
+        required: false
+        description: Value stored in the login_region cookie.
+        schema:
+          type: string
+          default: default
+        example: default
+      - name: domain
+        in: query
+        required: false
+        description: Value stored in the login_domain cookie.
+        schema:
+          type: string
+        example: ''
+      responses:
+        '200':
+          description: CSRF token issued.
+          headers:
+            Set-Cookie:
+              description: 'platformcsrftoken=<csrf>; login_region=<region>; login_domain="<domain>"'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    example: csrf_issued
+                  csrf_token:
+                    type: string
+                  region:
+                    type: string
+                  domain:
+                    type: string
+                  next:
+                    type: string
+        '403':
+          $ref: '#/components/responses/MissingRequestedWith'
+    post:
+      tags:
+      - Authentication
+      summary: Log in and obtain a session cookie
+      description: 'Authenticates a username/password pair and returns the platformsessionid
+        cookie plus a rotated platformcsrftoken. Requires all three mandatory headers: the
+        Cookie header carrying the platformcsrftoken issued by GET /login, an X-CSRFToken
+        header holding that same value, and X-Requested-With set to XMLHttpRequest.'
+      operationId: post_login
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: admin
+              password: admin-password
+              region: default
+              domain: ''
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: admin
+              password: admin-password
+              region: default
+              domain: ''
+      responses:
+        '200':
+          description: Authenticated. The session and CSRF cookies are set on the response.
+          headers:
+            Set-Cookie:
+              description: 'platformsessionid=<session>; platformcsrftoken=<csrf>; login_region=<region>;
+                login_domain="<domain>"'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    example: authenticated
+                  username:
+                    type: string
+                  role:
+                    type: string
+                    enum:
+                    - admin
+                    - user
+                  region:
+                    type: string
+                  domain:
+                    type: string
+                  session_id:
+                    type: string
+                  csrf_token:
+                    type: string
+                  required_headers:
+                    type: object
+                    description: The exact header set to replay on every subsequent call.
+                    properties:
+                      Cookie:
+                        type: string
+                      X-CSRFToken:
+                        type: string
+                      X-Requested-With:
+                        type: string
+        '400':
+          description: username or password missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Username or password is incorrect.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/CsrfFailure'
   /project/api_access/view_credentials:
     get:
       tags:
       - Project
       summary: View API credentials
       operationId: get_project_api_access_view_credentials
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: Observed in logs (probe/crawl). Response body not captured.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    platformSessionCookie:
+      type: apiKey
+      in: cookie
+      name: platformsessionid
+      description: 'Session cookie issued by POST /login. It travels in the Cookie header
+        alongside platformcsrftoken, login_region and login_domain - see the Cookie parameter,
+        which is required on every operation.'
+    csrfTokenHeader:
+      type: apiKey
+      in: header
+      name: X-CSRFToken
+      description: Must carry the same value as the platformcsrftoken cookie (double-submit).
+    requestedWithHeader:
+      type: apiKey
+      in: header
+      name: X-Requested-With
+      description: Must be the literal string XMLHttpRequest.
+  parameters:
+    CookieHeader:
+      name: Cookie
+      in: header
+      required: true
+      description: 'All four platform cookies. platformsessionid and platformcsrftoken are
+        mandatory; login_region and login_domain are set by the login flow and echoed back.'
+      schema:
+        type: string
+      example: 'login_region=default; login_domain=""; platformcsrftoken=UZuMhVTfTR3qlMLpEJNCcWEJ1BylzO6vFsopW9gADP4A1TBFuNfHh9NYhDWpanQQ;
+        platformsessionid=vf1253sf5c8iy7vrl3ubr07wrsjyb3l2'
+    CsrfTokenHeader:
+      name: X-CSRFToken
+      in: header
+      required: true
+      description: Must equal the platformcsrftoken cookie. A missing or mismatched value is
+        rejected with 403.
+      schema:
+        type: string
+      example: UZuMhVTfTR3qlMLpEJNCcWEJ1BylzO6vFsopW9gADP4A1TBFuNfHh9NYhDWpanQQ
+    RequestedWithHeader:
+      name: X-Requested-With
+      in: header
+      required: true
+      description: Must be the literal string XMLHttpRequest.
+      schema:
+        type: string
+        enum:
+        - XMLHttpRequest
+      example: XMLHttpRequest
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+      - username
+      - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        region:
+          type: string
+          description: Stored in the login_region cookie. Defaults to the cookie value, then
+            to 'default'.
+        domain:
+          type: string
+          description: Stored in the login_domain cookie.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+  responses:
+    Unauthorized:
+      description: Cookie header, platformsessionid cookie, or session is missing or unknown.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CsrfFailure:
+      description: X-CSRFToken is missing, or does not match the platformcsrftoken cookie.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    MissingRequestedWith:
+      description: X-Requested-With is missing or is not XMLHttpRequest.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: 'X-Requested-With is missing or wrong, X-CSRFToken is missing or does
+        not match the platformcsrftoken cookie, or the role of the session is not permitted
+        to reach this path.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

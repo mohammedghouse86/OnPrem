@@ -5,7 +5,19 @@ const fs = require('fs');
 const express = require('express');
 
 const data = require('./data');
-const { SESSIONS, CSRF_TOKEN, ADMIN_ONLY_PATHS, authenticate, requireCsrf } = require('./auth');
+const {
+  COOKIE,
+  REQUESTED_WITH,
+  SESSIONS,
+  CREDENTIALS,
+  ADMIN_ONLY_PATHS,
+  authenticate,
+  requireCsrf,
+  requireRequestedWith,
+  createSession,
+  setAuthCookies,
+  randomToken,
+} = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 8443;
@@ -31,21 +43,28 @@ app.get('/', (req, res) => {
     spec: 'onpremtest.yaml (OpenAPI 3.0.3)',
     openapi: '/openapi.yaml',
     authentication: {
-      how: 'Send the sessionid cookie on every request, e.g. Cookie: sessionid=admin-static-session-token',
-      fallback_header: 'X-Session-Id',
-      csrf: {
-        cookie: 'csrftoken',
-        form_field: 'csrfmiddlewaretoken',
-        value: CSRF_TOKEN,
+      how: 'GET /login for the CSRF cookie, then POST /login for the session cookie.',
+      mandatory_headers: {
+        Cookie: `${COOKIE.region}=<region>; ${COOKIE.domain}="<domain>"; ${COOKIE.csrf}=<csrf>; ${COOKIE.session}=<session>`,
+        'X-CSRFToken': `must equal the ${COOKIE.csrf} cookie`,
+        'X-Requested-With': REQUESTED_WITH,
       },
-      sessions: Object.entries(SESSIONS).map(([token, s]) => ({
+      credentials: Object.entries(CREDENTIALS).map(([username, c]) => ({
+        username,
+        password: c.password,
+        role: c.role,
+      })),
+      static_sessions: Object.entries(SESSIONS).map(([token, s]) => ({
         role: s.role,
         username: s.username,
-        cookie: `sessionid=${token}`,
+        cookie: `${COOKIE.session}=${token}; ${COOKIE.csrf}=${s.csrf}`,
+        'X-CSRFToken': s.csrf,
       })),
     },
     admin_only_paths: ADMIN_ONLY_PATHS,
     endpoints: [
+      'GET  /login                                   (CSRF bootstrap, no session)',
+      'POST /login                                   (form/JSON: username, password, region, domain)',
       'GET  /admin/datanets                          (admin only)',
       'GET  /admin/host_topology/json?_=<ts>',
       'GET  /admin/software_management',
@@ -78,7 +97,85 @@ app.get('/openapi.yaml', (req, res) => {
 });
 
 /* ------------------------------------------------------------------ *
- * Everything below requires a session cookie
+ * Everything below requires X-Requested-With: XMLHttpRequest
+ * ------------------------------------------------------------------ */
+
+app.use(requireRequestedWith);
+
+/* ---- Login -------------------------------------------------------- */
+
+/**
+ * CSRF bootstrap. No session required: it hands back the `platformcsrftoken`
+ * cookie that `POST /login` then expects to see echoed in `X-CSRFToken`.
+ */
+app.get('/login', (req, res) => {
+  const csrf = randomToken(64);
+  const region = req.query.region || 'default';
+  const domain = req.query.domain || '';
+
+  setAuthCookies(res, { csrf, region, domain });
+
+  res.json({
+    result: 'csrf_issued',
+    csrf_token: csrf,
+    region,
+    domain,
+    next: 'POST /login with Cookie + X-CSRFToken + X-Requested-With',
+  });
+});
+
+app.post('/login', requireCsrf, (req, res) => {
+  const body = req.body || {};
+  const username = body.username;
+  const password = body.password;
+
+  const missing = ['username', 'password'].filter((f) => !body[f]);
+  if (missing.length) {
+    return res.status(400).json({
+      error: 'validation_error',
+      message: `Missing required field(s): ${missing.join(', ')}.`,
+    });
+  }
+
+  const account = CREDENTIALS[username];
+  if (!account || account.password !== password) {
+    return res.status(401).json({
+      error: 'invalid_credentials',
+      message: 'Username or password is incorrect.',
+    });
+  }
+
+  const region = body.region || req.cookies[COOKIE.region] || 'default';
+  const domain = body.domain || req.cookies[COOKIE.domain] || '';
+
+  const { sessionId, session } = createSession({
+    username,
+    role: account.role,
+    region,
+    domain,
+  });
+
+  // The session gets a fresh CSRF token; the bootstrap one is discarded.
+  setAuthCookies(res, { sessionId, csrf: session.csrf, region, domain });
+
+  return res.json({
+    result: 'authenticated',
+    username: session.username,
+    role: session.role,
+    region: session.region,
+    domain: session.domain,
+    session_id: sessionId,
+    csrf_token: session.csrf,
+    required_headers: {
+      Cookie: `${COOKIE.region}=${session.region}; ${COOKIE.domain}="${session.domain}"; ${COOKIE.csrf}=${session.csrf}; ${COOKIE.session}=${sessionId}`,
+      'X-CSRFToken': session.csrf,
+      'X-Requested-With': REQUESTED_WITH,
+    },
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Everything below additionally requires the session + CSRF cookies
  * ------------------------------------------------------------------ */
 
 app.use(authenticate);

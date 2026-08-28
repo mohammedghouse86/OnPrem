@@ -1,15 +1,52 @@
 'use strict';
 
 /**
- * Static credentials. These values are constants — they are never rotated,
- * regenerated or expired, so a test client can hard-code them.
+ * Platform cookie/CSRF authentication.
+ *
+ * Every authenticated request must carry all three of:
+ *
+ *   Cookie: login_region=<region>; login_domain="<domain>";
+ *           platformcsrftoken=<csrf>; platformsessionid=<session>
+ *   X-CSRFToken: <csrf>            (must equal the platformcsrftoken cookie)
+ *   X-Requested-With: XMLHttpRequest
+ *
+ * Cookies are minted by `GET /login` (CSRF bootstrap) and `POST /login`
+ * (session). The two seeded sessions below are static constants — they never
+ * rotate and never expire — so a test client can hard-code them instead.
  */
-const SESSIONS = {
-  'admin-static-session-token': { username: 'admin', role: 'admin' },
-  'user-static-session-token': { username: 'user', role: 'user' },
+
+const COOKIE = {
+  session: 'platformsessionid',
+  csrf: 'platformcsrftoken',
+  region: 'login_region',
+  domain: 'login_domain',
 };
 
-const CSRF_TOKEN = 'static-csrf-token-value';
+const REQUESTED_WITH = 'XMLHttpRequest';
+
+/** Static sessions: token -> session. `POST /login` adds more at runtime. */
+const SESSIONS = {
+  'admin-static-session-token': {
+    username: 'admin',
+    role: 'admin',
+    csrf: 'admin-static-csrf-token',
+    region: 'default',
+    domain: '',
+  },
+  'user-static-session-token': {
+    username: 'user',
+    role: 'user',
+    csrf: 'user-static-csrf-token',
+    region: 'default',
+    domain: '',
+  },
+};
+
+/** Login credentials for `POST /login`. */
+const CREDENTIALS = {
+  admin: { password: 'admin-password', role: 'admin' },
+  user: { password: 'user-password', role: 'user' },
+};
 
 /** Paths that only the admin session may reach. */
 const ADMIN_ONLY_PATHS = [
@@ -18,47 +55,172 @@ const ADMIN_ONLY_PATHS = [
   '/admin/system_config',
 ];
 
-function parseCookies(header) {
+const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+function randomToken(length) {
+  let out = '';
+  for (let i = 0; i < length; i += 1) {
+    out += TOKEN_ALPHABET[Math.floor(Math.random() * TOKEN_ALPHABET.length)];
+  }
+  return out;
+}
+
+function parseCookies(cookieHeader) {
   const jar = {};
-  if (!header) return jar;
-  for (const part of header.split(';')) {
+  if (!cookieHeader) return jar;
+  for (const part of cookieHeader.split(';')) {
     const idx = part.indexOf('=');
     if (idx === -1) continue;
     const key = part.slice(0, idx).trim();
-    const value = part.slice(idx + 1).trim();
+    let value = part.slice(idx + 1).trim();
+    // The UI sends login_domain="" — unwrap the literal quotes.
+    if (value.length > 1 && value.startsWith('"') && value.endsWith('"')) {
+      value = value.slice(1, -1);
+    }
     if (key) jar[key] = decodeURIComponent(value);
   }
   return jar;
 }
 
-/**
- * Resolves the caller from the `sessionid` cookie. An `X-Session-Id` header is
- * accepted as a fallback for clients that cannot set cookies.
- */
-function identify(req) {
-  const cookies = parseCookies(req.headers.cookie);
-  req.cookies = cookies;
-  const token = cookies.sessionid || req.get('X-Session-Id');
-  return { token, session: token ? SESSIONS[token] : undefined };
+/** Parses cookies once and pins them on the request. */
+function cookiesOf(req) {
+  if (!req.cookies) req.cookies = parseCookies(req.headers.cookie);
+  return req.cookies;
 }
 
-function authenticate(req, res, next) {
-  const { token, session } = identify(req);
+/**
+ * Reads a header, collapsing the `a, a` form Node produces when a client sends
+ * the same header twice with the same value — a spec that declares a header
+ * both as a security scheme and as a required parameter can provoke exactly
+ * that. Genuinely conflicting values are left alone so they still fail.
+ */
+function header(req, name) {
+  const raw = req.get(name);
+  if (!raw) return raw;
+  const parts = raw.split(',').map((v) => v.trim()).filter(Boolean);
+  const distinct = [...new Set(parts)];
+  return distinct.length === 1 ? distinct[0] : raw;
+}
 
-  if (!session) {
-    return res.status(401).json({
-      error: 'unauthorized',
-      message: token
-        ? 'Unknown sessionid cookie.'
-        : 'Missing sessionid cookie. Send Cookie: sessionid=<admin|user token>.',
+function unauthorized(res, message) {
+  return res.status(401).json({ error: 'unauthorized', message });
+}
+
+function csrfFailure(res, message) {
+  return res.status(403).json({ error: 'csrf_failure', message });
+}
+
+/** Writes the four platform cookies onto the response. */
+function setAuthCookies(res, { sessionId, csrf, region, domain }) {
+  const opts = { path: '/', sameSite: 'Lax' };
+  if (region !== undefined) res.cookie(COOKIE.region, region || 'default', opts);
+  if (domain !== undefined) res.cookie(COOKIE.domain, `"${domain || ''}"`, opts);
+  if (csrf) res.cookie(COOKIE.csrf, csrf, opts);
+  if (sessionId) res.cookie(COOKIE.session, sessionId, { ...opts, httpOnly: true });
+}
+
+/** Mints a session for a successful login. */
+function createSession({ username, role, region, domain }) {
+  const sessionId = randomToken(32);
+  const session = {
+    username,
+    role,
+    csrf: randomToken(64),
+    region: region || 'default',
+    domain: domain || '',
+  };
+  SESSIONS[sessionId] = session;
+  return { sessionId, session };
+}
+
+/** `X-Requested-With: XMLHttpRequest` — mandatory on every endpoint. */
+function requireRequestedWith(req, res, next) {
+  const value = header(req, 'X-Requested-With');
+  if (!value) {
+    return res.status(403).json({
+      error: 'missing_required_header',
+      message: `Header 'X-Requested-With: ${REQUESTED_WITH}' is required.`,
+      required_header: 'X-Requested-With',
     });
+  }
+  if (value.toLowerCase() !== REQUESTED_WITH.toLowerCase()) {
+    return res.status(403).json({
+      error: 'invalid_header',
+      message: `Header 'X-Requested-With' must be '${REQUESTED_WITH}', got '${value}'.`,
+      required_header: 'X-Requested-With',
+    });
+  }
+  return next();
+}
+
+/**
+ * Double-submit CSRF: the `X-CSRFToken` header must be present and must equal
+ * the `platformcsrftoken` cookie. Used standalone by `POST /login`, where no
+ * session exists yet, and again inside `authenticate` for every other endpoint.
+ */
+function requireCsrfPair(req, res) {
+  const cookies = cookiesOf(req);
+  const cookieToken = cookies[COOKIE.csrf];
+  const headerToken = header(req, 'X-CSRFToken');
+
+  if (!cookieToken) {
+    return csrfFailure(res, `Cookie '${COOKIE.csrf}' is missing. Call GET /login first.`);
+  }
+  if (!headerToken) {
+    return csrfFailure(res, "Header 'X-CSRFToken' is required.");
+  }
+  if (headerToken !== cookieToken) {
+    return csrfFailure(res, `Header 'X-CSRFToken' does not match the '${COOKIE.csrf}' cookie.`);
+  }
+  return null;
+}
+
+function requireCsrf(req, res, next) {
+  const failure = requireCsrfPair(req, res);
+  if (failure) return failure;
+  return next();
+}
+
+/**
+ * Full check for the authenticated surface: Cookie + X-CSRFToken +
+ * X-Requested-With, then the per-role path rules.
+ */
+function authenticate(req, res, next) {
+  if (!req.headers.cookie) {
+    return unauthorized(
+      res,
+      `Cookie header is missing. Send '${COOKIE.session}' and '${COOKIE.csrf}' — call POST /login to obtain them.`
+    );
+  }
+
+  const cookies = cookiesOf(req);
+  const sessionId = cookies[COOKIE.session];
+  if (!sessionId) {
+    return unauthorized(res, `Cookie '${COOKIE.session}' is missing.`);
+  }
+
+  const session = SESSIONS[sessionId];
+  if (!session) {
+    return unauthorized(res, `Unknown '${COOKIE.session}' cookie.`);
+  }
+
+  const csrfFailed = requireCsrfPair(req, res);
+  if (csrfFailed) return csrfFailed;
+
+  if (cookies[COOKIE.csrf] !== session.csrf) {
+    return csrfFailure(res, `The '${COOKIE.csrf}' cookie does not belong to this session.`);
   }
 
   req.session = session;
+  req.sessionId = sessionId;
 
-  // Keep the cookies pinned on every response so a browser session sticks.
-  res.cookie('sessionid', token, { path: '/', sameSite: 'Lax' });
-  res.cookie('csrftoken', CSRF_TOKEN, { path: '/', sameSite: 'Lax' });
+  // Keep the cookies pinned so a browser session sticks.
+  setAuthCookies(res, {
+    sessionId,
+    csrf: session.csrf,
+    region: session.region,
+    domain: session.domain,
+  });
 
   if (session.role !== 'admin' && ADMIN_ONLY_PATHS.includes(req.path)) {
     return res.status(403).json({
@@ -71,20 +233,17 @@ function authenticate(req, res, next) {
   return next();
 }
 
-/**
- * Django-style CSRF check for the form posts described in the spec.
- * Any non-empty token is accepted so the endpoints stay easy to exercise.
- */
-function requireCsrf(req, res, next) {
-  const token =
-    (req.body && req.body.csrfmiddlewaretoken) || req.get('X-CSRFToken');
-  if (!token) {
-    return res.status(403).json({
-      error: 'csrf_failure',
-      message: 'CSRF token missing or incorrect (csrfmiddlewaretoken).',
-    });
-  }
-  return next();
-}
-
-module.exports = { SESSIONS, CSRF_TOKEN, ADMIN_ONLY_PATHS, authenticate, requireCsrf, parseCookies };
+module.exports = {
+  COOKIE,
+  REQUESTED_WITH,
+  SESSIONS,
+  CREDENTIALS,
+  ADMIN_ONLY_PATHS,
+  authenticate,
+  requireCsrf,
+  requireRequestedWith,
+  createSession,
+  setAuthCookies,
+  parseCookies,
+  randomToken,
+};
