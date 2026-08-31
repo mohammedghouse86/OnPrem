@@ -8,3 +8,7 @@ npm-debug.log*
 *.har
 *HAR*.json
 StarlingX*.json
+
+# Generated credentials reference — holds working session tokens and passwords.
+# Regenerate locally with `npm run accounts`.
+ACCOUNTS.txt

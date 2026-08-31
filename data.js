@@ -163,22 +163,22 @@ const identity = {
 };
 
 /**
- * Tenant-owned objects behind the id-bearing paths. Ids match the ones seen in
- * the HAR captures so a scan replaying that traffic hits real rows.
+ * Tenant-owned objects behind the id-bearing paths. Ids are synthetic
+ * placeholders; the real ones from the capture are kept out of this repo.
  */
 const projects = {
   projects: [
-    { id: '0388e7d480314c3c82b408e49c471ed9', name: 'Tenant-A', tenant: 'tenant-a', domain_id: 'default', enabled: true, members: 2 },
-    { id: 'b0e38d0e2b864874b9c2715218c95f74', name: 'Tenant-B', tenant: 'tenant-b', domain_id: 'default', enabled: true, members: 1 },
+    { id: '0000aaaa0000bbbb0000cccc00000001', name: 'Tenant-A', tenant: 'tenant-a', domain_id: 'default', enabled: true, members: 2 },
+    { id: '0000aaaa0000bbbb0000cccc00000002', name: 'Tenant-B', tenant: 'tenant-b', domain_id: 'default', enabled: true, members: 1 },
   ],
   total: 2,
 };
 
 const identityUsers = {
   users: [
-    { id: '452c18fd6dec4b298942ab0e4f571036', name: 'admin', tenant: 'tenant-a', email: 'admin@example.com', enabled: true, role_id: 'e3f2a1b0c9d84e7fa1b2c3d4e5f60001' },
-    { id: '9c1d7e5a3b2f4068a7c9e1d3b5f70002', name: 'user', tenant: 'tenant-a', email: 'user@example.com', enabled: true, role_id: 'e3f2a1b0c9d84e7fa1b2c3d4e5f60003' },
-    { id: '7b4e2c9a1f6d40538e2a6c4b9d1f0003', name: 'readonly', tenant: 'tenant-b', email: 'readonly@example.com', enabled: true, role_id: 'e3f2a1b0c9d84e7fa1b2c3d4e5f60003' },
+    { id: '0000dddd0000eeee0000ffff00000001', name: 'admin', tenant: 'tenant-a', email: 'admin@example.com', enabled: true, role_id: 'e3f2a1b0c9d84e7fa1b2c3d4e5f60001' },
+    { id: '0000dddd0000eeee0000ffff00000002', name: 'user', tenant: 'tenant-a', email: 'user@example.com', enabled: true, role_id: 'e3f2a1b0c9d84e7fa1b2c3d4e5f60003' },
+    { id: '0000dddd0000eeee0000ffff00000003', name: 'readonly', tenant: 'tenant-b', email: 'readonly@example.com', enabled: true, role_id: 'e3f2a1b0c9d84e7fa1b2c3d4e5f60003' },
   ],
   total: 3,
 };

@@ -18,15 +18,15 @@ info:
     files:
     - StarlingX HAR request 1.json
     - StarlingX HAR request 2.json
-    origin: https://172.25.58.88:8443
+    origin: redacted - internal host
     entries: 1059
     distinctPaths: 32
     responseBodies: not recorded
 servers:
 - url: https://onprem-01yz.onrender.com
   description: Mock implementation of this surface.
-- url: https://172.25.58.88:8443
-  description: StarlingX dashboard the HAR captures were taken from.
+- url: https://onprem.example.internal
+  description: 'Placeholder for the internal StarlingX host the captures came from; the real hostname is not kept in this repo.'
 security:
 - platformSessionCookie: []
   csrfTokenHeader: []
@@ -110,7 +110,7 @@ paths:
             example:
               csrfmiddlewaretoken: '<csrf-token>'
               region: default
-              username: perfaitest_adm
+              username: dashboard_admin
               password: '<password>'
               fake_email: ''
               fake_password: ''
@@ -284,7 +284,7 @@ paths:
       - Admin
       summary: Host topology (JSON)
       description: 'Polled on a timer by the topology page. The capture shows the cache-buster sent as a dynamic
-        query KEY with an empty value (?1787934284319=), not as a named parameter with a value. The _
+        query KEY with an empty value (?1700000000000=), not as a named parameter with a value. The _
         parameter below stands in for that key, which OpenAPI cannot express directly. This is the one
         path observed answering 200 without a trailing slash. Observed in the StarlingX HAR captures.'
       operationId: get_admin_host_topology_json
@@ -298,7 +298,7 @@ paths:
         description: 'Cache-buster. In the capture the key itself is an epoch-ms timestamp and the value is empty.'
         schema:
           type: string
-        example: 1787934284319
+        example: 1700000000000
       responses:
         '200':
           description: 'Topology payload. Served as text/json.'
@@ -675,10 +675,10 @@ paths:
       - name: project_id
         in: path
         required: true
-        description: 'Keystone project (tenant) id, 32 hex characters.'
+        description: 'Keystone project (tenant) id, 32 hex characters. The example is a synthetic placeholder.'
         schema:
           type: string
-        example: 0388e7d480314c3c82b408e49c471ed9
+        example: 0000aaaa0000bbbb0000cccc00000001
       - name: step
         in: query
         required: false
@@ -782,10 +782,10 @@ paths:
       - name: user_id
         in: path
         required: true
-        description: 'Keystone user id, 32 hex characters.'
+        description: 'Keystone user id, 32 hex characters. The example is a synthetic placeholder.'
         schema:
           type: string
-        example: 452c18fd6dec4b298942ab0e4f571036
+        example: 0000dddd0000eeee0000ffff00000001
       - name: tab
         in: query
         required: false
@@ -1159,8 +1159,8 @@ components:
         auth contract rather than from the capture itself.'
       schema:
         type: string
-      example: 'login_region=default; login_domain=""; platformcsrftoken=UZuMhVTfTR3qlMLpEJNCcWEJ1BylzO6vFsopW9gADP4A1TBFuNfHh9NYhDWpanQQ;
-        platformsessionid=vf1253sf5c8iy7vrl3ubr07wrsjyb3l2'
+      example: 'login_region=default; login_domain=""; platformcsrftoken=CSRFCOOKIEEXAMPLECSRFCOOKIEEXAMPLECSRFCOOKIEEXAMPLECSRFCOOKIEEXA;
+        platformsessionid=SESSIONIDEXAMPLESESSIONIDEXAMPLE'
     CsrfTokenHeader:
       name: X-CSRFToken
       in: header
@@ -1169,7 +1169,7 @@ components:
         requests; a missing or mismatched value is rejected with 403.'
       schema:
         type: string
-      example: W8qGO7ueizXyjwNuOBroo2d4Fm7lCWdxp5qwOjWv4tbFO2pTX3w0mODzbZ5tFAFH
+      example: CSRFTOKENEXAMPLECSRFTOKENEXAMPLECSRFTOKENEXAMPLECSRFTOKENEXAMPL
     RequestedWithHeader:
       name: X-Requested-With
       in: header

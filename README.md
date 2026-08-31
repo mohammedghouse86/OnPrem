@@ -79,12 +79,12 @@ Three independent rules, so an authorization scan has something to find:
    to another tenant, and `404` when it does not exist.
    `/identity/application_credentials/` lists only the caller's tenant.
 
-Tenant-owned object ids (taken from the HAR captures):
+Tenant-owned object ids (synthetic — the real ids are not kept in this repo):
 
 | Object          | Tenant-A                           | Tenant-B                           |
 | --------------- | ---------------------------------- | ---------------------------------- |
-| project         | `0388e7d480314c3c82b408e49c471ed9` | `b0e38d0e2b864874b9c2715218c95f74` |
-| user            | `452c18fd6dec4b298942ab0e4f571036` | `7b4e2c9a1f6d40538e2a6c4b9d1f0003` |
+| project         | `0000aaaa0000bbbb0000cccc00000001` | `0000aaaa0000bbbb0000cccc00000002` |
+| user            | `0000dddd0000eeee0000ffff00000001` | `0000dddd0000eeee0000ffff00000003` |
 
 Every other endpoint works for all three roles.
 

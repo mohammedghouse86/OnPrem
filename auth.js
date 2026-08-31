@@ -25,12 +25,12 @@ const COOKIE = {
 const REQUESTED_WITH = 'XMLHttpRequest';
 
 /**
- * Tenants (Keystone projects). The ids are the ones observed in the HAR
- * captures, so object-level checks here line up with real traffic.
+ * Tenants (Keystone projects). The ids are synthetic placeholders — the real
+ * ones from the capture are deliberately kept out of this repo.
  */
 const TENANTS = {
-  'tenant-a': { id: '0388e7d480314c3c82b408e49c471ed9', name: 'Tenant-A' },
-  'tenant-b': { id: 'b0e38d0e2b864874b9c2715218c95f74', name: 'Tenant-B' },
+  'tenant-a': { id: '0000aaaa0000bbbb0000cccc00000001', name: 'Tenant-A' },
+  'tenant-b': { id: '0000aaaa0000bbbb0000cccc00000002', name: 'Tenant-B' },
 };
 
 /**
