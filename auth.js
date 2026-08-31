@@ -36,16 +36,43 @@ const TENANTS = {
 /**
  * Static sessions: token -> session. `POST /auth/login/` adds more at runtime.
  *
- * The three seeded accounts cover the roles an authorization scan needs:
- * admin is the owner, user is a non-owner peer inside the same tenant, and
- * readonly is a low-privilege account belonging to a DIFFERENT tenant.
+ * These values are CONSTANTS. They are never rotated, never regenerated and
+ * carry no expiry: there is no TTL, no idle timeout and no refresh. A client
+ * can hard-code them and they will keep working for the life of the service.
+ *
+ * The three accounts cover the roles an authorization scan needs: admin is the
+ * owner, user is a non-owner peer inside the same tenant, and readonly is a
+ * low-privilege account belonging to a DIFFERENT tenant.
+ *
+ * Each account has two session tokens that behave identically — an opaque one
+ * that looks like real platform traffic, and the earlier readable one, kept so
+ * existing clients keep working. Either may be used.
  */
 const SESSIONS = {
+  // ---- admin: owner, Tenant-A ----
+  zfbn6gq6z4bg2cakt5qws465pltpz8h7: {
+    username: 'admin',
+    role: 'admin',
+    tenant: 'tenant-a',
+    csrf: 'jxDfPFHr9Gmm82SKKZrGYY1ccQwVPiB7Pj62a193EScUlXjIybrL48yCIAs9qMtE',
+    region: 'default',
+    domain: '',
+  },
   'admin-static-session-token': {
     username: 'admin',
     role: 'admin',
     tenant: 'tenant-a',
     csrf: 'admin-static-csrf-token',
+    region: 'default',
+    domain: '',
+  },
+
+  // ---- user: non-owner peer, Tenant-A ----
+  '5ezzptqpoof3mxzfarrbh1auktfjj199': {
+    username: 'user',
+    role: 'user',
+    tenant: 'tenant-a',
+    csrf: 'tGo3uOuQJcfOuQyKHJFMj3Td88A6MQesZ0AShoifAFLMD68zO2KKndFC90IC7YwH',
     region: 'default',
     domain: '',
   },
@@ -57,6 +84,16 @@ const SESSIONS = {
     region: 'default',
     domain: '',
   },
+
+  // ---- readonly: low privilege, Tenant-B ----
+  djuyx6gtzae4rweznb3aned1vba9cfnt: {
+    username: 'readonly',
+    role: 'readonly',
+    tenant: 'tenant-b',
+    csrf: 'EZVpHGxD2NauP8iKqFFOc2hKvSgcuAPwZk9QcIBFMWnVK2HS8qFtxaA07SF5GZj2',
+    region: 'default',
+    domain: '',
+  },
   'readonly-static-session-token': {
     username: 'readonly',
     role: 'readonly',
@@ -65,6 +102,13 @@ const SESSIONS = {
     region: 'default',
     domain: '',
   },
+};
+
+/** The opaque token to advertise for each account. */
+const PRIMARY_SESSION = {
+  admin: 'zfbn6gq6z4bg2cakt5qws465pltpz8h7',
+  user: '5ezzptqpoof3mxzfarrbh1auktfjj199',
+  readonly: 'djuyx6gtzae4rweznb3aned1vba9cfnt',
 };
 
 /** Login credentials for `POST /auth/login/`. */
@@ -150,7 +194,8 @@ function csrfFailure(res, message) {
 
 /** Writes the four platform cookies onto the response. */
 function setAuthCookies(res, { sessionId, csrf, region, domain }) {
-  const opts = { path: '/', sameSite: 'Lax' };
+  // Ten years: these credentials do not expire.
+  const opts = { path: '/', sameSite: 'Lax', maxAge: 10 * 365 * 24 * 60 * 60 * 1000 };
   if (region !== undefined) res.cookie(COOKIE.region, region || 'default', opts);
   if (domain !== undefined) res.cookie(COOKIE.domain, `"${domain || ''}"`, opts);
   if (csrf) res.cookie(COOKIE.csrf, csrf, opts);
@@ -309,6 +354,7 @@ function requireSameTenant(getOwnerTenant) {
 
 module.exports = {
   COOKIE,
+  PRIMARY_SESSION,
   TENANTS,
   READ_ONLY_ROLES,
   requireSameTenant,

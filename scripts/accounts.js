@@ -24,6 +24,9 @@ p();
 p('  CONFIDENTIAL — NOT COMMITTED. This file is listed in .gitignore.');
 p('  Generated from auth.js. Regenerate with:  npm run accounts');
 p();
+p('  NO EXPIRY. These tokens are constants: never rotated, never regenerated,');
+p('  no TTL, no idle timeout, no refresh. Hard-code them.');
+p();
 p('  Every request to every endpoint must carry ALL THREE headers below.');
 p();
 p('    missing Cookie            -> 401 unauthorized');
@@ -42,8 +45,15 @@ p();
 
 const T = auth.TENANTS;
 
-for (const [token, s] of Object.entries(auth.SESSIONS)) {
+// One block per account, keyed on the opaque token; the readable token for the
+// same account is listed underneath as an equivalent alternative.
+const primaries = Object.entries(auth.PRIMARY_SESSION).map(([user, token]) => [token, auth.SESSIONS[token]]);
+
+for (const [token, s] of primaries) {
   const cred = auth.CREDENTIALS[s.username];
+  const legacy = Object.entries(auth.SESSIONS).find(
+    ([t, v]) => v.username === s.username && t !== token
+  );
   const cookie =
     `login_region=${s.region || 'default'}; login_domain="${s.domain}"; ` +
     `platformcsrftoken=${s.csrf}; platformsessionid=${token}`;
@@ -62,6 +72,12 @@ for (const [token, s] of Object.entries(auth.SESSIONS)) {
   p('  [3] X-Requested-With  (literal string, identical for every account)');
   p('      X-Requested-With: XMLHttpRequest');
   p();
+  if (legacy) {
+    p('  Also accepted for this same account (identical behaviour):');
+    p(`      Cookie: login_region=default; login_domain=""; platformcsrftoken=${legacy[1].csrf}; platformsessionid=${legacy[0]}`);
+    p(`      X-CSRFToken: ${legacy[1].csrf}`);
+    p();
+  }
   p('  curl:');
   p(`    curl -H 'Cookie: ${cookie}' \\`);
   p(`         -H 'X-CSRFToken: ${s.csrf}' \\`);
