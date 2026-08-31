@@ -102,6 +102,15 @@ function header(req, name) {
   return distinct.length === 1 ? distinct[0] : raw;
 }
 
+/**
+ * Drops a trailing slash so the admin-only list matches either form. The spec
+ * documents the Django-canonical slashed paths (/admin/system_config/), while
+ * Express routes match both.
+ */
+function normalizePath(p) {
+  return p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p;
+}
+
 function unauthorized(res, message) {
   return res.status(401).json({ error: 'unauthorized', message });
 }
@@ -222,7 +231,7 @@ function authenticate(req, res, next) {
     domain: session.domain,
   });
 
-  if (session.role !== 'admin' && ADMIN_ONLY_PATHS.includes(req.path)) {
+  if (session.role !== 'admin' && ADMIN_ONLY_PATHS.includes(normalizePath(req.path))) {
     return res.status(403).json({
       error: 'forbidden',
       message: `Role '${session.role}' is not permitted to access ${req.path}.`,
@@ -246,4 +255,5 @@ module.exports = {
   setAuthCookies,
   parseCookies,
   randomToken,
+  normalizePath,
 };

@@ -43,7 +43,7 @@ app.get('/', (req, res) => {
     spec: 'onpremtest.yaml (OpenAPI 3.0.3)',
     openapi: '/openapi.yaml',
     authentication: {
-      how: 'GET /login for the CSRF cookie, then POST /login for the session cookie.',
+      how: 'GET /auth/login/ for the CSRF cookie, then POST /auth/login/ for the session cookie.',
       mandatory_headers: {
         Cookie: `${COOKIE.region}=<region>; ${COOKIE.domain}="<domain>"; ${COOKIE.csrf}=<csrf>; ${COOKIE.session}=<session>`,
         'X-CSRFToken': `must equal the ${COOKIE.csrf} cookie`,
@@ -63,8 +63,8 @@ app.get('/', (req, res) => {
     },
     admin_only_paths: ADMIN_ONLY_PATHS,
     endpoints: [
-      'GET  /login                                   (CSRF bootstrap, no session)',
-      'POST /login                                   (form/JSON: username, password, region, domain)',
+      'GET  /auth/login/                             (CSRF bootstrap, no session; alias /login)',
+      'POST /auth/login/                             (form/JSON: username, password, region, domain)',
       'GET  /admin/datanets                          (admin only)',
       'GET  /admin/host_topology/json?_=<ts>',
       'GET  /admin/software_management',
@@ -105,10 +105,17 @@ app.use(requireRequestedWith);
 /* ---- Login -------------------------------------------------------- */
 
 /**
+ * The HAR captures show the real dashboard logging in at /auth/login/, so that
+ * is what the spec documents. /login is kept as an alias for clients written
+ * against the earlier revision.
+ */
+const LOGIN_ROUTES = ['/auth/login/', '/auth/login', '/login'];
+
+/**
  * CSRF bootstrap. No session required: it hands back the `platformcsrftoken`
  * cookie that `POST /login` then expects to see echoed in `X-CSRFToken`.
  */
-app.get('/login', (req, res) => {
+app.get(LOGIN_ROUTES, (req, res) => {
   const csrf = randomToken(64);
   const region = req.query.region || 'default';
   const domain = req.query.domain || '';
@@ -124,7 +131,7 @@ app.get('/login', (req, res) => {
   });
 });
 
-app.post('/login', requireCsrf, (req, res) => {
+app.post(LOGIN_ROUTES, requireCsrf, (req, res) => {
   const body = req.body || {};
   const username = body.username;
   const password = body.password;

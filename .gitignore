@@ -2,3 +2,9 @@ node_modules/
 npm-debug.log*
 .env
 .vscode/
+
+# HAR captures — confidential. They contain live session traffic, credentials
+# and internal hostnames. Never commit these.
+*.har
+*HAR*.json
+StarlingX*.json

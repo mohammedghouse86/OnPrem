@@ -1,33 +1,279 @@
 openapi: 3.0.3
 info:
   title: OnPrem Test API
-  description: 'OpenAPI spec MoonSun'
-  version: 1.0.0
+  description: 'OpenAPI spec MoonSun. Surface reconstructed from two StarlingX/Horizon
+    dashboard HAR captures (1059 requests, 32 distinct paths) merged with the endpoints
+    previously derived from probe/crawl logs. Paths use the trailing-slash form Django
+    treats as canonical: the capture shows GET /admin/active_alarms answering 301 to
+    /admin/active_alarms/. The one exception is /admin/host_topology/json, observed
+    answering 200 without a trailing slash. Response bodies were not recorded in the
+    captures, so only status codes and content types are documented.'
+  version: 1.1.0
   x-observed-ids:
     orgId: 6a68df8e793f44109c3f2f6c
     appId: 6a832657fe79c4b93a3804f1
     exampleRunId: 6a88865d442ba0277bb14fdc
     note: Context identifiers captured.
+  x-har-capture:
+    files:
+    - StarlingX HAR request 1.json
+    - StarlingX HAR request 2.json
+    origin: https://172.25.58.88:8443
+    entries: 1059
+    distinctPaths: 32
+    responseBodies: not recorded
 servers:
 - url: https://onprem-01yz.onrender.com
+  description: Mock implementation of this surface.
+- url: https://172.25.58.88:8443
+  description: StarlingX dashboard the HAR captures were taken from.
 security:
 - platformSessionCookie: []
   csrfTokenHeader: []
   requestedWithHeader: []
 paths:
-  /admin/datanets:
+  /:
+    get:
+      tags:
+      - Other
+      summary: Dashboard root
+      description: 'Redirects to the default dashboard. Observed in the StarlingX HAR captures.'
+      operationId: get_root
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '302':
+          description: 'Redirect to /admin/.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /auth/login/:
+    get:
+      tags:
+      - Authentication
+      summary: Login page (CSRF bootstrap)
+      description: 'Renders the login form and sets the CSRF cookie that POST /auth/login/ requires. Not recorded
+        directly; inferred from the Referer on the captured login POSTs.'
+      operationId: get_auth_login
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Login form rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Authentication
+      summary: Log in
+      description: 'Authenticates against the dashboard and establishes the session. Answers 302 to / on success.
+        fake_email and fake_password are browser autofill decoys sent empty by the UI. Observed in the
+        StarlingX HAR captures.'
+      operationId: post_auth_login
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - csrfmiddlewaretoken
+              - region
+              - username
+              - password
+              properties:
+                csrfmiddlewaretoken:
+                  type: string
+                region:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                fake_email:
+                  type: string
+                fake_password:
+                  type: string
+            example:
+              csrfmiddlewaretoken: '<csrf-token>'
+              region: default
+              username: perfaitest_adm
+              password: '<password>'
+              fake_email: ''
+              fake_password: ''
+      responses:
+        '302':
+          description: 'Authenticated. Location: /'
+        '200':
+          description: 'Login form redisplayed with errors when the credentials are rejected.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/:
     get:
       tags:
       - Admin
-      summary: Data networks (admin)
-      operationId: get_admin_datanets
+      summary: Admin dashboard
+      description: 'Landing page of the admin dashboard. Observed in the StarlingX HAR captures.'
+      operationId: get_admin
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: tab
+        in: query
+        required: false
+        description: 'Tab slug to activate, e.g. inventory__deviceusage.'
+        schema:
+          type: string
+        example: inventory__deviceusage
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/active_alarms/:
+    get:
+      tags:
+      - Admin
+      summary: Active alarms
+      description: 'Requesting this path without the trailing slash answers 301 to the slashed form. Observed in the
+        StarlingX HAR captures.'
+      operationId: get_admin_active_alarms
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/datanets/:
+    get:
+      tags:
+      - Admin
+      summary: Data networks
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_admin_datanets
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/events/:
+    get:
+      tags:
+      - Admin
+      summary: Events
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_admin_events
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/events_suppression/:
+    get:
+      tags:
+      - Admin
+      summary: Event suppression
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_admin_events_suppression
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/host_topology/:
+    get:
+      tags:
+      - Admin
+      summary: Host topology page
+      description: 'HTML page. The data behind it is polled from /admin/host_topology/json. Observed in the
+        StarlingX HAR captures.'
+      operationId: get_admin_host_topology
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -37,14 +283,11 @@ paths:
       tags:
       - Admin
       summary: Host topology (JSON)
+      description: 'Polled on a timer by the topology page. The capture shows the cache-buster sent as a dynamic
+        query KEY with an empty value (?1787934284319=), not as a named parameter with a value. The _
+        parameter below stands in for that key, which OpenAPI cannot express directly. This is the one
+        path observed answering 200 without a trailing slash. Observed in the StarlingX HAR captures.'
       operationId: get_admin_host_topology_json
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
@@ -52,57 +295,28 @@ paths:
       - name: _
         in: query
         required: false
-        description: Cache-buster timestamp (dynamic key, e.g. 1786981713026=1)
+        description: 'Cache-buster. In the capture the key itself is an epoch-ms timestamp and the value is empty.'
         schema:
           type: string
-        example: '1786981713026'
-  /admin/software_management:
+        example: 1787934284319
+      responses:
+        '200':
+          description: 'Topology payload. Served as text/json.'
+          content:
+            text/json:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/software_management/:
     get:
       tags:
       - Admin
-      summary: Software management (admin)
+      summary: Software management
+      description: 'Observed in the StarlingX HAR captures.'
       operationId: get_admin_software_management
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /admin/software_management/releaseupload:
-    get:
-      tags:
-      - Admin
-      summary: Software release upload (admin)
-      operationId: get_admin_software_management_releaseupload
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /admin/storage_overview:
-    get:
-      tags:
-      - Admin
-      summary: Storage overview
-      operationId: get_admin_storage_overview
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
@@ -110,32 +324,108 @@ paths:
       - name: loaded
         in: query
         required: false
-        description: UI tab-loaded flag observed in logs
+        description: 'Comma-separated tab slugs already rendered.'
         schema:
           type: string
-        example: '1'
-  /admin/system_config:
+        example: software_management_tabs__releases,software_management_tabs__deploy_orchestration
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/software_management/releaseupload/:
     get:
       tags:
       - Admin
-      summary: System configuration (admin)
-      operationId: get_admin_system_config
+      summary: Software release upload
+      description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
+      operationId: get_admin_software_management_releaseupload
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/fm/alarm_list:
+  /admin/storage_overview/:
+    get:
+      tags:
+      - Admin
+      summary: Storage overview
+      description: 'Present in the capture, though the recorded request was aborted before a response arrived.
+        Observed in the StarlingX HAR captures.'
+      operationId: get_admin_storage_overview
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/system_config/:
+    get:
+      tags:
+      - Admin
+      summary: System configuration
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_admin_system_config
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Comma-separated tab slugs already rendered.'
+        schema:
+          type: string
+        example: system_config_tab__systems,system_config_tab__address_pools,system_config_tab__storage_table
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/fm/alarm_list/:
     get:
       tags:
       - Fault Management
       summary: List alarms
+      description: 'Highest-traffic endpoint in the capture (405 requests) — polled continuously by the UI. Observed
+        in the StarlingX HAR captures.'
       operationId: get_api_fm_alarm_list
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
@@ -143,16 +433,21 @@ paths:
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Payload returned. Response body was not recorded in the capture.'
+          content:
+            application/json:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/fm/event_log_list:
+  /api/fm/event_log_list/:
     get:
       tags:
       - Fault Management
       summary: List event log entries
+      description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_api_fm_event_log_list
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
@@ -160,33 +455,50 @@ paths:
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Payload returned. Response body was not recorded in the capture.'
+          content:
+            application/json:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/fm/events_suppression_list:
+  /api/fm/events_suppression_list/:
     get:
       tags:
       - Fault Management
       summary: List event suppressions
+      description: 'Observed in the StarlingX HAR captures.'
       operationId: get_api_fm_events_suppression_list
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: include_unsuppressed
+        in: query
+        required: false
+        description: 'Flag sent with an empty value in the capture.'
+        schema:
+          type: string
+        example: ''
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Payload returned. Response body was not recorded in the capture.'
+          content:
+            application/json:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/keystone/roles:
+  /api/keystone/roles/:
     get:
       tags:
       - Identity
       summary: List Keystone roles
+      description: 'Observed in the StarlingX HAR captures.'
       operationId: get_api_keystone_roles
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
@@ -194,41 +506,54 @@ paths:
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Payload returned. Response body was not recorded in the capture.'
+          content:
+            application/json:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/policy:
+  /api/policy/:
     post:
       tags:
       - Other
-      summary: Policy API
+      summary: Evaluate policy rules
+      description: 'Asks the dashboard whether the current session satisfies a set of Keystone policy rules. Each
+        rule is a [service, action] pair. Observed in the StarlingX HAR captures.'
       operationId: post_api_policy
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+            example:
+              rules:
+              - - identity
+                - identity:create_role
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Payload returned. Response body was not recorded in the capture.'
+          content:
+            application/json:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-      requestBody:
-        required: false
-        description: Request body not captured in logs (endpoint discovered via capability/ownership analysis;
-          scope unknown).
-        content:
-          application/json:
-            schema:
-              type: object
-  /api/settings:
+  /api/settings/:
     get:
       tags:
       - API
       summary: Application settings
+      description: 'Observed in the StarlingX HAR captures.'
       operationId: get_api_settings
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
@@ -236,50 +561,88 @@ paths:
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Payload returned. Response body was not recorded in the capture.'
+          content:
+            application/json:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /header:
-    get:
-      tags:
-      - Other
-      summary: UI header fragment
-      operationId: get_header
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-  /identity:
+  /identity/:
     get:
       tags:
       - Identity
-      summary: Identity root / user list
+      summary: Projects list
+      description: 'The identity dashboard index lists projects (tenants). Observed in the StarlingX HAR captures.'
       operationId: get_identity
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /identity/create:
+    post:
+      tags:
+      - Identity
+      summary: Filter projects
+      description: 'Submits the project list filter. Answers 302 back to /identity/. Observed in the StarlingX HAR
+        captures.'
+      operationId: post_identity
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+              - csrfmiddlewaretoken
+              - tenants__filter__q_field
+              - tenants__filter__q
+              properties:
+                csrfmiddlewaretoken:
+                  type: string
+                tenants__filter__q_field:
+                  type: string
+                tenants__filter__q:
+                  type: string
+            example:
+              csrfmiddlewaretoken: '<csrf-token>'
+              tenants__filter__q_field: name
+              tenants__filter__q: test
+      responses:
+        '302':
+          description: 'Redirect back to /identity/.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /identity/create/:
     get:
       tags:
       - Identity
-      summary: Identity create page
+      summary: Create project page
+      description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_identity_create
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
@@ -287,87 +650,200 @@ paths:
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /identity/groups:
+  /identity/{project_id}/update/:
     get:
       tags:
       - Identity
-      summary: Identity groups list
-      operationId: get_identity_groups
+      summary: Update project
+      description: 'Multi-step project edit wizard. Observed steps: update_members, update_group_members. The only
+        endpoint pair in the surface that takes an object id in the path. Observed in the StarlingX HAR
+        captures.'
+      operationId: get_identity_project_update
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: project_id
+        in: path
+        required: true
+        description: 'Keystone project (tenant) id, 32 hex characters.'
+        schema:
+          type: string
+        example: 0388e7d480314c3c82b408e49c471ed9
+      - name: step
+        in: query
+        required: false
+        description: 'Wizard step to render.'
+        schema:
+          type: string
+          enum:
+          - update_members
+          - update_group_members
+        example: update_members
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /identity/groups/create:
+  /identity/users/:
+    get:
+      tags:
+      - Identity
+      summary: Users list
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_identity_users
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags:
       - Identity
-      summary: Create identity group
-      operationId: post_identity_groups_create
+      summary: Filter users
+      description: 'Submits the user list filter. Answers 302 back to /identity/users/. Observed in the StarlingX
+        HAR captures.'
+      operationId: post_identity_users
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
       requestBody:
         required: true
         content:
           application/x-www-form-urlencoded:
             schema:
               type: object
+              required:
+              - csrfmiddlewaretoken
+              - users__filter__q_field
+              - users__filter__q
               properties:
                 csrfmiddlewaretoken:
                   type: string
-                name:
+                users__filter__q_field:
                   type: string
-                description:
+                users__filter__q:
                   type: string
-              description: Fields/values reflect requests captured in logs; required-ness is inferred
-                from observed traffic, not a published API contract.
             example:
-              csrfmiddlewaretoken: <csrf-token>
-              name: West
-              description: Example group description
-  /identity/users/create:
+              csrfmiddlewaretoken: '<csrf-token>'
+              users__filter__q_field: name
+              users__filter__q: perf
+      responses:
+        '302':
+          description: 'Redirect back to /identity/users/.'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /identity/users/{user_id}/detail/:
+    get:
+      tags:
+      - Identity
+      summary: User detail
+      description: 'Per-user page with overview, role assignment and group tabs. Observed in the StarlingX HAR
+        captures.'
+      operationId: get_identity_user_detail
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: user_id
+        in: path
+        required: true
+        description: 'Keystone user id, 32 hex characters.'
+        schema:
+          type: string
+        example: 452c18fd6dec4b298942ab0e4f571036
+      - name: tab
+        in: query
+        required: false
+        description: 'Tab slug to activate.'
+        schema:
+          type: string
+          enum:
+          - user_details__overview
+          - user_details__roleassignments
+          - user_details__groups
+        example: user_details__roleassignments
+      - name: loaded
+        in: query
+        required: false
+        description: 'Comma-separated tab slugs already rendered.'
+        schema:
+          type: string
+        example: user_details__overview,user_details__roleassignments
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /identity/users/create/:
     post:
       tags:
       - Identity
       summary: Create identity user
+      description: 'Field set inferred from earlier observed traffic, not from a published contract. Carried over
+        from the previous log-derived spec; not seen in the HAR captures.'
       operationId: post_identity_users_create
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
       - $ref: '#/components/parameters/RequestedWithHeader'
-      responses:
-        '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
       requestBody:
         required: true
         content:
           application/x-www-form-urlencoded:
             schema:
               type: object
+              required:
+              - csrfmiddlewaretoken
+              - name
+              - email
+              - password
+              - confirm_password
+              - domain_id
+              - domain_name
+              - project
+              - role_id
+              - enabled
               properties:
                 csrfmiddlewaretoken:
                   type: string
@@ -395,85 +871,61 @@ paths:
                   type: string
                 fake_password:
                   type: string
-              description: Fields/values reflect requests captured in logs; required-ness is inferred
-                from observed traffic, not a published API contract.
             example:
-              csrfmiddlewaretoken: <csrf-token>
+              csrfmiddlewaretoken: '<csrf-token>'
               name: orchid
               description: Example user description
               email: abc1787332238925@example.com
-              password: <password>
-              confirm_password: <password>
-              domain_id: Cargo
-              domain_name: Genderqueer
+              password: '<password>'
+              confirm_password: '<password>'
+              domain_id: default
+              domain_name: Default
               project: ''
               role_id: ''
               enabled: 'true'
               fake_email: ''
               fake_password: ''
-  /login:
-    get:
-      tags:
-      - Authentication
-      summary: CSRF bootstrap
-      description: 'Issues the platformcsrftoken, login_region and login_domain cookies. No
-        session is required - this is the first call of the login flow, and its token is what
-        POST /login expects to see echoed back in the X-CSRFToken header.'
-      operationId: get_login
-      security: []
-      parameters:
-      - $ref: '#/components/parameters/RequestedWithHeader'
-      - name: region
-        in: query
-        required: false
-        description: Value stored in the login_region cookie.
-        schema:
-          type: string
-          default: default
-        example: default
-      - name: domain
-        in: query
-        required: false
-        description: Value stored in the login_domain cookie.
-        schema:
-          type: string
-        example: ''
       responses:
         '200':
-          description: CSRF token issued.
-          headers:
-            Set-Cookie:
-              description: 'platformcsrftoken=<csrf>; login_region=<region>; login_domain="<domain>"'
+          description: 'Page rendered.'
+          content:
+            text/html:
               schema:
                 type: string
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: string
-                    example: csrf_issued
-                  csrf_token:
-                    type: string
-                  region:
-                    type: string
-                  domain:
-                    type: string
-                  next:
-                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/MissingRequestedWith'
+          $ref: '#/components/responses/Forbidden'
+  /identity/groups/:
+    get:
+      tags:
+      - Identity
+      summary: Groups list
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_identity_groups
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /identity/groups/create/:
     post:
       tags:
-      - Authentication
-      summary: Log in and obtain a session cookie
-      description: 'Authenticates a username/password pair and returns the platformsessionid
-        cookie plus a rotated platformcsrftoken. Requires all three mandatory headers: the
-        Cookie header carrying the platformcsrftoken issued by GET /login, an X-CSRFToken
-        header holding that same value, and X-Requested-With set to XMLHttpRequest.'
-      operationId: post_login
-      security: []
+      - Identity
+      summary: Create identity group
+      description: 'Field set inferred from earlier observed traffic, not from a published contract. Carried over
+        from the previous log-derived spec; not seen in the HAR captures.'
+      operationId: post_identity_groups_create
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
       - $ref: '#/components/parameters/CsrfTokenHeader'
@@ -483,81 +935,116 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              type: object
+              required:
+              - csrfmiddlewaretoken
+              - name
+              properties:
+                csrfmiddlewaretoken:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
             example:
-              username: admin
-              password: admin-password
-              region: default
-              domain: ''
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-            example:
-              username: admin
-              password: admin-password
-              region: default
-              domain: ''
+              csrfmiddlewaretoken: '<csrf-token>'
+              name: West
+              description: Example group description
       responses:
         '200':
-          description: Authenticated. The session and CSRF cookies are set on the response.
-          headers:
-            Set-Cookie:
-              description: 'platformsessionid=<session>; platformcsrftoken=<csrf>; login_region=<region>;
-                login_domain="<domain>"'
+          description: 'Page rendered.'
+          content:
+            text/html:
               schema:
                 type: string
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: string
-                    example: authenticated
-                  username:
-                    type: string
-                  role:
-                    type: string
-                    enum:
-                    - admin
-                    - user
-                  region:
-                    type: string
-                  domain:
-                    type: string
-                  session_id:
-                    type: string
-                  csrf_token:
-                    type: string
-                  required_headers:
-                    type: object
-                    description: The exact header set to replay on every subsequent call.
-                    properties:
-                      Cookie:
-                        type: string
-                      X-CSRFToken:
-                        type: string
-                      X-Requested-With:
-                        type: string
-        '400':
-          description: username or password missing.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
-          description: Username or password is incorrect.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/CsrfFailure'
-  /project/api_access/view_credentials:
+          $ref: '#/components/responses/Forbidden'
+  /identity/roles/:
+    get:
+      tags:
+      - Identity
+      summary: Roles list
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_identity_roles
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /identity/application_credentials/:
+    get:
+      tags:
+      - Identity
+      summary: Application credentials
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_identity_application_credentials
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /project/api_access/:
+    get:
+      tags:
+      - Project
+      summary: API access
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_project_api_access
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      - name: loaded
+        in: query
+        required: false
+        description: 'Horizon tab-loaded flag. Comma-separated list of tab slugs already rendered; often sent empty.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /project/api_access/view_credentials/:
     get:
       tags:
       - Project
       summary: View API credentials
+      description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_project_api_access_view_credentials
       parameters:
       - $ref: '#/components/parameters/CookieHeader'
@@ -565,7 +1052,79 @@ paths:
       - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
-          description: Observed in logs (probe/crawl). Response body not captured.
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /header/:
+    get:
+      tags:
+      - Other
+      summary: UI header fragment
+      description: 'HTML fragment refreshed by the UI (35 requests in the capture). Observed in the StarlingX HAR
+        captures.'
+      operationId: get_header
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /settings/:
+    get:
+      tags:
+      - Other
+      summary: User settings page
+      description: 'Observed in the StarlingX HAR captures.'
+      operationId: get_settings
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Page rendered.'
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /i18n/js/horizon+openstack_dashboard+starlingx_dashboard+starlingx_dashboard.dashboards.dc_admin/:
+    get:
+      tags:
+      - Other
+      summary: Javascript translation catalog
+      description: 'Django javascript_catalog view. The path segment is the literal list of translation domains.
+        Observed in the StarlingX HAR captures.'
+      operationId: get_i18n_js_catalog
+      parameters:
+      - $ref: '#/components/parameters/CookieHeader'
+      - $ref: '#/components/parameters/CsrfTokenHeader'
+      - $ref: '#/components/parameters/RequestedWithHeader'
+      responses:
+        '200':
+          description: 'Translation catalog.'
+          content:
+            text/javascript:
+              schema:
+                type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -576,9 +1135,9 @@ components:
       type: apiKey
       in: cookie
       name: platformsessionid
-      description: 'Session cookie issued by POST /login. It travels in the Cookie header
-        alongside platformcsrftoken, login_region and login_domain - see the Cookie parameter,
-        which is required on every operation.'
+      description: 'Session cookie established by POST /auth/login/. It travels in the Cookie
+        header alongside platformcsrftoken, login_region and login_domain - see the Cookie
+        parameter, which is required on every operation.'
     csrfTokenHeader:
       type: apiKey
       in: header
@@ -595,7 +1154,9 @@ components:
       in: header
       required: true
       description: 'All four platform cookies. platformsessionid and platformcsrftoken are
-        mandatory; login_region and login_domain are set by the login flow and echoed back.'
+        mandatory; login_region and login_domain are set by the login flow and echoed back.
+        Cookies were scrubbed from the HAR captures, so the names come from the platform
+        auth contract rather than from the capture itself.'
       schema:
         type: string
       example: 'login_region=default; login_domain=""; platformcsrftoken=UZuMhVTfTR3qlMLpEJNCcWEJ1BylzO6vFsopW9gADP4A1TBFuNfHh9NYhDWpanQQ;
@@ -604,40 +1165,36 @@ components:
       name: X-CSRFToken
       in: header
       required: true
-      description: Must equal the platformcsrftoken cookie. A missing or mismatched value is
-        rejected with 403.
+      description: 'Must equal the platformcsrftoken cookie. Present on 432 of the captured
+        requests; a missing or mismatched value is rejected with 403.'
       schema:
         type: string
-      example: UZuMhVTfTR3qlMLpEJNCcWEJ1BylzO6vFsopW9gADP4A1TBFuNfHh9NYhDWpanQQ
+      example: W8qGO7ueizXyjwNuOBroo2d4Fm7lCWdxp5qwOjWv4tbFO2pTX3w0mODzbZ5tFAFH
     RequestedWithHeader:
       name: X-Requested-With
       in: header
       required: true
-      description: Must be the literal string XMLHttpRequest.
+      description: 'Must be the literal string XMLHttpRequest. Present on 544 of the captured
+        requests - the XHR calls. Full-page browser navigations in the capture do not carry it,
+        since a browser cannot add headers to a top-level document load.'
       schema:
         type: string
         enum:
         - XMLHttpRequest
       example: XMLHttpRequest
   schemas:
-    LoginRequest:
+    PolicyRequest:
       type: object
       required:
-      - username
-      - password
+      - rules
       properties:
-        username:
-          type: string
-        password:
-          type: string
-          format: password
-        region:
-          type: string
-          description: Stored in the login_region cookie. Defaults to the cookie value, then
-            to 'default'.
-        domain:
-          type: string
-          description: Stored in the login_domain cookie.
+        rules:
+          type: array
+          description: Each rule is a [service, action] pair.
+          items:
+            type: array
+            items:
+              type: string
     Error:
       type: object
       properties:
@@ -652,22 +1209,10 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    CsrfFailure:
-      description: X-CSRFToken is missing, or does not match the platformcsrftoken cookie.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    MissingRequestedWith:
-      description: X-Requested-With is missing or is not XMLHttpRequest.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
     Forbidden:
-      description: 'X-Requested-With is missing or wrong, X-CSRFToken is missing or does
-        not match the platformcsrftoken cookie, or the role of the session is not permitted
-        to reach this path.'
+      description: 'X-Requested-With is missing or wrong, X-CSRFToken is missing or does not
+        match the platformcsrftoken cookie, or the role of the session is not permitted to
+        reach this path.'
       content:
         application/json:
           schema:
