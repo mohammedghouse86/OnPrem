@@ -73,7 +73,8 @@ for (const [token, s] of primaries) {
   p('      X-Requested-With: XMLHttpRequest');
   p();
   if (legacy) {
-    p('  Also accepted for this same account (identical behaviour):');
+    p('  Also accepted for this same account (identical behaviour, but only on');
+    p('  builds from 806d57c onward — use the pair above unless you need these):');
     p(`      Cookie: login_region=default; login_domain=""; platformcsrftoken=${legacy[1].csrf}; platformsessionid=${legacy[0]}`);
     p(`      X-CSRFToken: ${legacy[1].csrf}`);
     p();

@@ -104,11 +104,16 @@ const SESSIONS = {
   },
 };
 
-/** The opaque token to advertise for each account. */
+/**
+ * The token ACCOUNTS.txt advertises for each account. These are the readable
+ * ones: they are the values verified working against the deployed service, so
+ * they are what a client should use. The opaque tokens above are equally valid
+ * and are listed as alternatives.
+ */
 const PRIMARY_SESSION = {
-  admin: 'zfbn6gq6z4bg2cakt5qws465pltpz8h7',
-  user: '5ezzptqpoof3mxzfarrbh1auktfjj199',
-  readonly: 'djuyx6gtzae4rweznb3aned1vba9cfnt',
+  admin: 'admin-static-session-token',
+  user: 'user-static-session-token',
+  readonly: 'readonly-static-session-token',
 };
 
 /** Login credentials for `POST /auth/login/`. */
