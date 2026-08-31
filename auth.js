@@ -24,11 +24,27 @@ const COOKIE = {
 
 const REQUESTED_WITH = 'XMLHttpRequest';
 
-/** Static sessions: token -> session. `POST /login` adds more at runtime. */
+/**
+ * Tenants (Keystone projects). The ids are the ones observed in the HAR
+ * captures, so object-level checks here line up with real traffic.
+ */
+const TENANTS = {
+  'tenant-a': { id: '0388e7d480314c3c82b408e49c471ed9', name: 'Tenant-A' },
+  'tenant-b': { id: 'b0e38d0e2b864874b9c2715218c95f74', name: 'Tenant-B' },
+};
+
+/**
+ * Static sessions: token -> session. `POST /auth/login/` adds more at runtime.
+ *
+ * The three seeded accounts cover the roles an authorization scan needs:
+ * admin is the owner, user is a non-owner peer inside the same tenant, and
+ * readonly is a low-privilege account belonging to a DIFFERENT tenant.
+ */
 const SESSIONS = {
   'admin-static-session-token': {
     username: 'admin',
     role: 'admin',
+    tenant: 'tenant-a',
     csrf: 'admin-static-csrf-token',
     region: 'default',
     domain: '',
@@ -36,17 +52,30 @@ const SESSIONS = {
   'user-static-session-token': {
     username: 'user',
     role: 'user',
+    tenant: 'tenant-a',
     csrf: 'user-static-csrf-token',
+    region: 'default',
+    domain: '',
+  },
+  'readonly-static-session-token': {
+    username: 'readonly',
+    role: 'readonly',
+    tenant: 'tenant-b',
+    csrf: 'readonly-static-csrf-token',
     region: 'default',
     domain: '',
   },
 };
 
-/** Login credentials for `POST /login`. */
+/** Login credentials for `POST /auth/login/`. */
 const CREDENTIALS = {
-  admin: { password: 'admin-password', role: 'admin' },
-  user: { password: 'user-password', role: 'user' },
+  admin: { password: 'admin-password', role: 'admin', tenant: 'tenant-a' },
+  user: { password: 'user-password', role: 'user', tenant: 'tenant-a' },
+  readonly: { password: 'readonly-password', role: 'readonly', tenant: 'tenant-b' },
 };
+
+/** The low-privilege role may not write anything. */
+const READ_ONLY_ROLES = ['readonly'];
 
 /** Paths that only the admin session may reach. */
 const ADMIN_ONLY_PATHS = [
@@ -129,11 +158,12 @@ function setAuthCookies(res, { sessionId, csrf, region, domain }) {
 }
 
 /** Mints a session for a successful login. */
-function createSession({ username, role, region, domain }) {
+function createSession({ username, role, tenant, region, domain }) {
   const sessionId = randomToken(32);
   const session = {
     username,
     role,
+    tenant: tenant || 'tenant-a',
     csrf: randomToken(64),
     region: region || 'default',
     domain: domain || '',
@@ -239,11 +269,49 @@ function authenticate(req, res, next) {
     });
   }
 
+  // Low-privilege roles get read access only.
+  if (READ_ONLY_ROLES.includes(session.role) && req.method !== 'GET' && req.method !== 'HEAD') {
+    return res.status(403).json({
+      error: 'forbidden',
+      message: `Role '${session.role}' is read-only and may not ${req.method} ${req.path}.`,
+      required_role: 'user',
+    });
+  }
+
   return next();
+}
+
+/**
+ * Object-level check for the id-bearing paths. An object belongs to a tenant;
+ * a session from another tenant is refused even when its role would otherwise
+ * allow the call. This is the case a BOLA / cross-tenant probe is looking for.
+ */
+function requireSameTenant(getOwnerTenant) {
+  return (req, res, next) => {
+    const owner = getOwnerTenant(req);
+
+    if (owner === undefined) {
+      return res.status(404).json({
+        error: 'not_found',
+        message: `No such object: ${req.path}`,
+      });
+    }
+    if (owner !== req.session.tenant) {
+      return res.status(403).json({
+        error: 'forbidden',
+        message: `Object belongs to ${TENANTS[owner].name}; this session is scoped to ${TENANTS[req.session.tenant].name}.`,
+        required_tenant: TENANTS[owner].id,
+      });
+    }
+    return next();
+  };
 }
 
 module.exports = {
   COOKIE,
+  TENANTS,
+  READ_ONLY_ROLES,
+  requireSameTenant,
   REQUESTED_WITH,
   SESSIONS,
   CREDENTIALS,

@@ -16,6 +16,8 @@ const {
   requireRequestedWith,
   createSession,
   setAuthCookies,
+  requireSameTenant,
+  TENANTS,
   randomToken,
 } = require('./auth');
 
@@ -240,6 +242,49 @@ app.get('/identity', (req, res) => {
 
 app.get('/identity/create', (req, res) => {
   res.json(data.identityCreateForm);
+});
+
+app.get(['/identity/roles/', '/identity/roles'], (req, res) => {
+  res.json(data.keystoneRoles);
+});
+
+app.get(['/identity/users/', '/identity/users'], (req, res) => {
+  res.json(data.identityUsers);
+});
+
+app.get(['/identity/application_credentials/', '/identity/application_credentials'], (req, res) => {
+  // Scoped to the caller's tenant — a cross-tenant session sees only its own.
+  const rows = data.applicationCredentials.application_credentials.filter(
+    (c) => c.tenant === req.session.tenant
+  );
+  res.json({ application_credentials: rows, total: rows.length });
+});
+
+/* ---- Identity: object-level (tenant-owned) ------------------------ */
+
+const projectOwner = (req) =>
+  (data.projects.projects.find((p) => p.id === req.params.project_id) || {}).tenant;
+const userOwner = (req) =>
+  (data.identityUsers.users.find((u) => u.id === req.params.user_id) || {}).tenant;
+
+app.get('/identity/:project_id/update/', requireSameTenant(projectOwner), (req, res) => {
+  const project = data.projects.projects.find((p) => p.id === req.params.project_id);
+  res.json({
+    project,
+    step: req.query.step || 'update_project',
+    tenant: TENANTS[project.tenant],
+    viewer: { user: req.session.username, role: req.session.role },
+  });
+});
+
+app.get('/identity/users/:user_id/detail/', requireSameTenant(userOwner), (req, res) => {
+  const user = data.identityUsers.users.find((u) => u.id === req.params.user_id);
+  res.json({
+    user,
+    tab: req.query.tab || 'user_details__overview',
+    tenant: TENANTS[user.tenant],
+    viewer: { user: req.session.username, role: req.session.role },
+  });
 });
 
 app.get('/identity/groups', (req, res) => {

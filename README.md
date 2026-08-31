@@ -39,20 +39,22 @@ const response = await fetch('https://<host>/api/fm/alarm_list', {
    Returns the `platformsessionid` cookie, a rotated CSRF token, and a
    `required_headers` object you can replay verbatim on every later call.
 
-| Username | Password         | Role  |
-| -------- | ---------------- | ----- |
-| `admin`  | `admin-password` | admin |
-| `user`   | `user-password`  | user  |
+| Username   | Password            | Role     | Tenant   | Purpose in an authorization scan |
+| ---------- | ------------------- | -------- | -------- | -------------------------------- |
+| `admin`    | `admin-password`    | admin    | Tenant-A | Owner |
+| `user`     | `user-password`     | user     | Tenant-A | Non-owner peer, same tenant |
+| `readonly` | `readonly-password` | readonly | Tenant-B | Low privilege, **different tenant** |
 
 ### Static sessions
 
 Two sessions are seeded and never rotate or expire, so a test client can skip
 the login flow and hard-code them:
 
-| Role  | Cookie                                                                          | `X-CSRFToken`             |
-| ----- | ------------------------------------------------------------------------------- | ------------------------- |
-| admin | `platformsessionid=admin-static-session-token; platformcsrftoken=admin-static-csrf-token` | `admin-static-csrf-token` |
-| user  | `platformsessionid=user-static-session-token; platformcsrftoken=user-static-csrf-token`   | `user-static-csrf-token`  |
+| Role     | `platformsessionid`             | `platformcsrftoken` / `X-CSRFToken` |
+| -------- | ------------------------------- | ----------------------------------- |
+| admin    | `admin-static-session-token`    | `admin-static-csrf-token`           |
+| user     | `user-static-session-token`     | `user-static-csrf-token`            |
+| readonly | `readonly-static-session-token` | `readonly-static-csrf-token`        |
 
 ### Failure codes
 
@@ -66,14 +68,25 @@ the login flow and hard-code them:
 
 ## Access control
 
-`user` is blocked with `403` on exactly three paths:
+Three independent rules, so an authorization scan has something to find:
 
-- `/admin/datanets`
-- `/admin/storage_overview`
-- `/admin/system_config`
+1. **Admin-only paths** — `user` and `readonly` get `403` on `/admin/datanets/`,
+   `/admin/storage_overview/` and `/admin/system_config/`. Both the slashed and
+   unslashed forms are covered.
+2. **Read-only role** — `readonly` gets `403` on every non-GET, whatever the path.
+3. **Tenant ownership** — the id-bearing paths `/identity/{project_id}/update/`
+   and `/identity/users/{user_id}/detail/` return `403` when the object belongs
+   to another tenant, and `404` when it does not exist.
+   `/identity/application_credentials/` lists only the caller's tenant.
 
-Every other endpoint works for both roles, including the remaining `/admin/*`
-paths (`host_topology/json`, `software_management`, `software_management/releaseupload`).
+Tenant-owned object ids (taken from the HAR captures):
+
+| Object          | Tenant-A                           | Tenant-B                           |
+| --------------- | ---------------------------------- | ---------------------------------- |
+| project         | `0388e7d480314c3c82b408e49c471ed9` | `b0e38d0e2b864874b9c2715218c95f74` |
+| user            | `452c18fd6dec4b298942ab0e4f571036` | `7b4e2c9a1f6d40538e2a6c4b9d1f0003` |
+
+Every other endpoint works for all three roles.
 
 ## Endpoints
 
