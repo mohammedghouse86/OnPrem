@@ -1159,8 +1159,6 @@ components:
         auth contract rather than from the capture itself.'
       schema:
         type: string
-      example: 'login_region=default; login_domain=""; platformcsrftoken=CSRFCOOKIEEXAMPLECSRFCOOKIEEXAMPLECSRFCOOKIEEXAMPLECSRFCOOKIEEXA;
-        platformsessionid=SESSIONIDEXAMPLESESSIONIDEXAMPLE'
     CsrfTokenHeader:
       name: X-CSRFToken
       in: header
@@ -1169,7 +1167,6 @@ components:
         requests; a missing or mismatched value is rejected with 403.'
       schema:
         type: string
-      example: CSRFTOKENEXAMPLECSRFTOKENEXAMPLECSRFTOKENEXAMPLECSRFTOKENEXAMPL
     RequestedWithHeader:
       name: X-Requested-With
       in: header
