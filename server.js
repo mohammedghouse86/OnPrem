@@ -216,6 +216,46 @@ app.get('/admin/system_config', (req, res) => {
   res.json(data.systemConfig);
 });
 
+/* ---- Admin pages -------------------------------------------------- */
+
+app.get(['/admin/', '/admin'], (req, res) => {
+  res.json({
+    dashboard: 'admin',
+    tab: req.query.tab || 'inventory__hosts',
+    loaded: req.query.loaded ?? null,
+    panels: [
+      'inventory__hosts',
+      'inventory__deviceusage',
+      'active_alarms',
+      'events',
+      'host_topology',
+      'software_management',
+      'storage_overview',
+      'system_config',
+      'datanets',
+    ],
+    viewer: { user: req.session.username, role: req.session.role },
+  });
+});
+
+app.get(['/admin/active_alarms/', '/admin/active_alarms'], (req, res) => {
+  const active = data.alarmList.alarms.filter((a) => a.state !== 'clear');
+  res.json({ alarms: active, total: active.length });
+});
+
+app.get(['/admin/events/', '/admin/events'], (req, res) => {
+  res.json(data.eventLogList);
+});
+
+app.get(['/admin/events_suppression/', '/admin/events_suppression'], (req, res) => {
+  res.json(data.eventsSuppressionList);
+});
+
+app.get(['/admin/host_topology/', '/admin/host_topology'], (req, res) => {
+  // The page; the timer-polled payload behind it is /admin/host_topology/json.
+  res.json({ page: 'host_topology', json_endpoint: '/admin/host_topology/json', ...data.hostTopology });
+});
+
 /* ---- Fault Management -------------------------------------------- */
 
 app.get('/api/fm/alarm_list', (req, res) => {
@@ -360,6 +400,50 @@ app.get('/api/settings', (req, res) => {
 app.get('/header', (req, res) => {
   res.type('text/html').send(data.headerHtml(req.session.username, req.session.role));
 });
+
+app.get(['/project/api_access/', '/project/api_access'], (req, res) => {
+  res.json({
+    project: req.session.role === 'admin' ? 'admin' : 'services',
+    user: req.session.username,
+    tenant: TENANTS[req.session.tenant],
+    loaded: req.query.loaded ?? null,
+    endpoints: [
+      { service: 'identity', type: 'keystone', region: 'RegionOne', url: 'https://onprem.example.internal:5000/v3' },
+      { service: 'fault', type: 'fm', region: 'RegionOne', url: 'https://onprem.example.internal:18002' },
+      { service: 'platform', type: 'sysinv', region: 'RegionOne', url: 'https://onprem.example.internal:6385/v1' },
+    ],
+    credentials_endpoint: '/project/api_access/view_credentials/',
+  });
+});
+
+app.get(['/settings/', '/settings'], (req, res) => {
+  res.json({
+    settings: {
+      language: 'en',
+      timezone: 'UTC',
+      pagesize: 20,
+      instance_log_length: 35,
+    },
+    user: req.session.username,
+    role: req.session.role,
+    tenant: TENANTS[req.session.tenant],
+  });
+});
+
+app.get(
+  ['/i18n/js/:catalog/', '/i18n/js/:catalog'],
+  (req, res) => {
+    // Django javascript_catalog view: a JS bundle, not JSON.
+    res.type('text/javascript').send(
+      [
+        '/* translation catalog: ' + req.params.catalog + ' */',
+        'var django = django || {};',
+        'django.catalog = django.catalog || {};',
+        'django.gettext = function (s) { return django.catalog[s] || s; };',
+      ].join('\n')
+    );
+  }
+);
 
 app.get('/project/api_access/view_credentials', (req, res) => {
   res.json({
