@@ -39,10 +39,6 @@ paths:
       summary: Dashboard root
       description: 'Redirects to the default dashboard. Observed in the StarlingX HAR captures.'
       operationId: get_root
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '302':
           description: 'Redirect to /admin/.'
@@ -58,9 +54,8 @@ paths:
       description: 'Renders the login form and sets the CSRF cookie that POST /auth/login/ requires. Not recorded
         directly; inferred from the Referer on the captured login POSTs.'
       operationId: get_auth_login
-      security: []
-      parameters:
-      - $ref: '#/components/parameters/RequestedWithHeader'
+      security:
+      - requestedWithHeader: []
       responses:
         '200':
           description: 'Login form rendered.'
@@ -78,11 +73,9 @@ paths:
         fake_email and fake_password are browser autofill decoys sent empty by the UI. Observed in the
         StarlingX HAR captures.'
       operationId: post_auth_login
-      security: []
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
+      security:
+      - csrfTokenHeader: []
+        requestedWithHeader: []
       requestBody:
         required: true
         content:
@@ -133,9 +126,6 @@ paths:
       description: 'Landing page of the admin dashboard. Observed in the StarlingX HAR captures.'
       operationId: get_admin
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: tab
         in: query
         required: false
@@ -168,10 +158,6 @@ paths:
       description: 'Requesting this path without the trailing slash answers 301 to the slashed form. Observed in the
         StarlingX HAR captures.'
       operationId: get_admin_active_alarms
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -191,9 +177,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_admin_datanets
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -218,10 +201,6 @@ paths:
       summary: Events
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_admin_events
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -240,10 +219,6 @@ paths:
       summary: Event suppression
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_admin_events_suppression
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -263,10 +238,6 @@ paths:
       description: 'HTML page. The data behind it is polled from /admin/host_topology/json. Observed in the
         StarlingX HAR captures.'
       operationId: get_admin_host_topology
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -289,9 +260,6 @@ paths:
         path observed answering 200 without a trailing slash. Observed in the StarlingX HAR captures.'
       operationId: get_admin_host_topology_json
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: _
         in: query
         required: false
@@ -318,9 +286,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_admin_software_management
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -346,10 +311,6 @@ paths:
       summary: Software release upload
       description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_admin_software_management_releaseupload
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -370,9 +331,6 @@ paths:
         Observed in the StarlingX HAR captures.'
       operationId: get_admin_storage_overview
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -398,9 +356,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_admin_system_config
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -427,10 +382,6 @@ paths:
       description: 'Highest-traffic endpoint in the capture (405 requests) — polled continuously by the UI. Observed
         in the StarlingX HAR captures.'
       operationId: get_api_fm_alarm_list
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Payload returned. Response body was not recorded in the capture.'
@@ -449,10 +400,6 @@ paths:
       summary: List event log entries
       description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_api_fm_event_log_list
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Payload returned. Response body was not recorded in the capture.'
@@ -472,9 +419,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_api_fm_events_suppression_list
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: include_unsuppressed
         in: query
         required: false
@@ -500,10 +444,6 @@ paths:
       summary: List Keystone roles
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_api_keystone_roles
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Payload returned. Response body was not recorded in the capture.'
@@ -523,10 +463,6 @@ paths:
       description: 'Asks the dashboard whether the current session satisfies a set of Keystone policy rules. Each
         rule is a [service, action] pair. Observed in the StarlingX HAR captures.'
       operationId: post_api_policy
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       requestBody:
         required: true
         content:
@@ -555,10 +491,6 @@ paths:
       summary: Application settings
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_api_settings
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Payload returned. Response body was not recorded in the capture.'
@@ -578,9 +510,6 @@ paths:
       description: 'The identity dashboard index lists projects (tenants). Observed in the StarlingX HAR captures.'
       operationId: get_identity
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -605,10 +534,6 @@ paths:
       description: 'Submits the project list filter. Answers 302 back to /identity/. Observed in the StarlingX HAR
         captures.'
       operationId: post_identity
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       requestBody:
         required: true
         content:
@@ -644,10 +569,6 @@ paths:
       summary: Create project page
       description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_identity_create
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -669,9 +590,6 @@ paths:
         captures.'
       operationId: get_identity_project_update
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: project_id
         in: path
         required: true
@@ -708,9 +626,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_identity_users
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -735,10 +650,6 @@ paths:
       description: 'Submits the user list filter. Answers 302 back to /identity/users/. Observed in the StarlingX
         HAR captures.'
       operationId: post_identity_users
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       requestBody:
         required: true
         content:
@@ -776,9 +687,6 @@ paths:
         captures.'
       operationId: get_identity_user_detail
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: user_id
         in: path
         required: true
@@ -823,10 +731,6 @@ paths:
       description: 'Field set inferred from earlier observed traffic, not from a published contract. Carried over
         from the previous log-derived spec; not seen in the HAR captures.'
       operationId: post_identity_users_create
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       requestBody:
         required: true
         content:
@@ -903,10 +807,6 @@ paths:
       summary: Groups list
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_identity_groups
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -926,10 +826,6 @@ paths:
       description: 'Field set inferred from earlier observed traffic, not from a published contract. Carried over
         from the previous log-derived spec; not seen in the HAR captures.'
       operationId: post_identity_groups_create
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       requestBody:
         required: true
         content:
@@ -968,10 +864,6 @@ paths:
       summary: Roles list
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_identity_roles
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -991,9 +883,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_identity_application_credentials
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -1019,9 +908,6 @@ paths:
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_project_api_access
       parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       - name: loaded
         in: query
         required: false
@@ -1046,10 +932,6 @@ paths:
       summary: View API credentials
       description: 'Carried over from the previous log-derived spec; not seen in the HAR captures.'
       operationId: get_project_api_access_view_credentials
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -1069,10 +951,6 @@ paths:
       description: 'HTML fragment refreshed by the UI (35 requests in the capture). Observed in the StarlingX HAR
         captures.'
       operationId: get_header
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -1091,10 +969,6 @@ paths:
       summary: User settings page
       description: 'Observed in the StarlingX HAR captures.'
       operationId: get_settings
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Page rendered.'
@@ -1114,10 +988,6 @@ paths:
       description: 'Django javascript_catalog view. The path segment is the literal list of translation domains.
         Observed in the StarlingX HAR captures.'
       operationId: get_i18n_js_catalog
-      parameters:
-      - $ref: '#/components/parameters/CookieHeader'
-      - $ref: '#/components/parameters/CsrfTokenHeader'
-      - $ref: '#/components/parameters/RequestedWithHeader'
       responses:
         '200':
           description: 'Translation catalog.'
@@ -1136,49 +1006,24 @@ components:
       in: cookie
       name: platformsessionid
       description: 'Session cookie established by POST /auth/login/. It travels in the Cookie
-        header alongside platformcsrftoken, login_region and login_domain - see the Cookie
-        parameter, which is required on every operation.'
+        header alongside platformcsrftoken, login_region and login_domain; platformsessionid
+        and platformcsrftoken are both mandatory, while login_region and login_domain are set
+        by the login flow and echoed back. Cookies were scrubbed from the HAR captures, so the
+        names come from the platform auth contract rather than from the capture itself.'
     csrfTokenHeader:
       type: apiKey
       in: header
       name: X-CSRFToken
-      description: Must carry the same value as the platformcsrftoken cookie (double-submit).
+      description: 'Must carry the same value as the platformcsrftoken cookie (double-submit).
+        Present on 432 of the captured requests; a missing or mismatched value is rejected
+        with 403.'
     requestedWithHeader:
       type: apiKey
       in: header
       name: X-Requested-With
-      description: Must be the literal string XMLHttpRequest.
-  parameters:
-    CookieHeader:
-      name: Cookie
-      in: header
-      required: true
-      description: 'All four platform cookies. platformsessionid and platformcsrftoken are
-        mandatory; login_region and login_domain are set by the login flow and echoed back.
-        Cookies were scrubbed from the HAR captures, so the names come from the platform
-        auth contract rather than from the capture itself.'
-      schema:
-        type: string
-    CsrfTokenHeader:
-      name: X-CSRFToken
-      in: header
-      required: true
-      description: 'Must equal the platformcsrftoken cookie. Present on 432 of the captured
-        requests; a missing or mismatched value is rejected with 403.'
-      schema:
-        type: string
-    RequestedWithHeader:
-      name: X-Requested-With
-      in: header
-      required: true
       description: 'Must be the literal string XMLHttpRequest. Present on 544 of the captured
-        requests - the XHR calls. Full-page browser navigations in the capture do not carry it,
-        since a browser cannot add headers to a top-level document load.'
-      schema:
-        type: string
-        enum:
-        - XMLHttpRequest
-      example: XMLHttpRequest
+        requests - the XHR calls. Full-page browser navigations in the capture do not carry
+        it, since a browser cannot add headers to a top-level document load.'
   schemas:
     PolicyRequest:
       type: object
