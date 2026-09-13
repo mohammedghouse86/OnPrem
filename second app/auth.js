@@ -86,11 +86,22 @@ const ADMIN_ONLY_PATHS = ['/um/api/auth/groups'];
  * Whole subtrees only an org admin may reach — matched by prefix, so the
  * id-bearing paths beneath them are covered without being listed one by one.
  *
- * The Virtual Lab target manager is the lab's hardware and site inventory.
- * Every read under it is admin-only: a non-admin account gets 403 on all of it,
- * which is the matrix this mock is meant to reproduce.
+ * The Virtual Lab target manager is the lab's hardware and site inventory —
+ * both the v4 paths and the older unversioned ones. Every read and every write
+ * under it is admin-only: a non-admin account gets 403 on all of it, which is
+ * the matrix this mock is meant to reproduce.
+ *
+ * The rest of the Virtual Lab surface is deliberately NOT listed here.
+ * Reservations, target control and the virtual-target catalogue are what an
+ * ordinary account uses, and `/target-control/user/groups` reports on the
+ * caller's own membership — closing those would make the user account useless
+ * rather than merely unprivileged.
  */
-const ADMIN_ONLY_PREFIXES = ['/vlab/api/v4/target-manager'];
+const ADMIN_ONLY_PREFIXES = [
+  '/vlab/api/v4/target-manager',
+  '/vlab/api/v1/target-manager',
+  '/vlab/api/target-manager',
+];
 
 /* ------------------------------------------------------------------ *
  * Cookie transport

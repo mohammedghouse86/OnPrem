@@ -404,6 +404,19 @@ router.get(
   }
 );
 
+/**
+ * Two per-project collections that were empty in every observed call, so their
+ * element shape is unknown. Both are org-scoped like the rest of TAF.
+ */
+for (const segment of ['targets', 'test-code-collections']) {
+  router.get(
+    `/taf/api/v3/projects/:projectId/${segment}`,
+    requireProjectId,
+    requireSameOrg(projectOwner, 'project'),
+    (req, res) => res.json(taf3([]))
+  );
+}
+
 /* ---- TAF v3: executions -------------------------------------------- */
 
 /** Every observed response was an empty page; none is invented here. */
@@ -604,6 +617,202 @@ router.get(`${TM}/locations-city/:locationsCityId`, (req, res) => {
     return fail(res, 400, 'locationsCityId must be a valid UUID');
   }
   return res.json(vlabData(data.VLAB_LOCATIONS_BY_CITY));
+});
+
+/* ---- target manager: the remaining reads ---------------------------- */
+
+/**
+ * `offset` and `count` are typed inconsistently across these services and the
+ * inconsistency is the contract, so each list below states which form it uses
+ * rather than sharing one helper.
+ */
+router.get(`${TM}/state`, (req, res) => res.json(vlabList(data.VLAB_STATES)));
+router.get(`${TM}/targets`, (req, res) => res.json(vlabList(data.VLAB_EMPTY)));
+router.get(`${TM}/boot-servers`, (req, res) => res.json(vlabList(data.VLAB_EMPTY)));
+router.get(`${TM}/terminal-server`, (req, res) => res.json(vlabList(data.VLAB_TERMINAL_SERVERS)));
+
+/** Returns `{stateId, name}` pairs — not the `id` key the sibling reads use. */
+router.get(`${TM}/states/:stateId`, (req, res) => {
+  if (!UUID.test(req.params.stateId)) {
+    return fail(res, 400, 'stateId must be a valid UUID');
+  }
+  return res.json(vlabData(data.VLAB_STATE_BY_ID));
+});
+
+/**
+ * The unversioned city routes. `/vlab/api/target-manager/city` has no `/v4`
+ * segment — the SPA calls this older path alongside the v4 ones, so both are
+ * served.
+ */
+const TM_V0 = '/vlab/api/target-manager';
+
+router.get(`${TM_V0}/city`, (req, res) => res.json(vlabList(data.VLAB_CITY_LIST)));
+
+/* ---- target manager: writes ---------------------------------------- */
+
+/**
+ * Creates answer in one of two shapes. The TypeORM-style insert result — with
+ * `identifiers`, `generatedMaps` and a snake_case `raw` — comes back from the
+ * BSP, architecture, lab, network-interface and terminal-server creates; the
+ * plain `{id}` comes back from country, state, city, location and KVM. Which
+ * endpoint uses which is not predictable from the resource, so each is wired to
+ * the one it was observed returning.
+ */
+function insertResult(extra) {
+  const id = uuid();
+  const created = nowIso();
+  return vlabData({
+    identifiers: [{ id }],
+    generatedMaps: [{ id, ...(extra || {}), createdDate: created, modifiedDate: created }],
+    raw: [{ id, ...(extra || {}), created_date: created, modified_date: created }],
+  });
+}
+
+const idResult = () => vlabData({ id: uuid() });
+
+/** What an update returns: a row count, and empty maps. */
+const updateResult = () => vlabData({ generatedMaps: [], raw: [], affected: 1 });
+
+/** `name` is the one field every one of these creates requires. */
+function requireName(req, res, next) {
+  if (!req.body || !req.body.name) {
+    return fail(res, 400, 'name must be at least 1 characters');
+  }
+  return next();
+}
+
+/** Rejects an id that is not a UUID before the update is attempted. */
+const requireUuid = (param) => (req, res, next) => {
+  if (!UUID.test(req.params[param])) {
+    return fail(res, 400, `${param} must be a valid UUID`);
+  }
+  return next();
+};
+
+// Creates returning the insert result. 201 in every observed case.
+for (const segment of ['bsp', 'info-architecture', 'lab', 'network-interface']) {
+  router.post(`${TM}/${segment}`, requireName, (req, res) => res.status(201).json(insertResult()));
+}
+
+// Creates returning a bare id.
+for (const segment of ['country', 'state', 'location', 'kvm']) {
+  router.post(`${TM}/${segment}`, requireName, (req, res) => res.status(201).json(idResult()));
+}
+
+router.post(`${TM_V0}/city`, requireName, (req, res) => res.status(201).json(idResult()));
+
+/** The terminal server echoes `portCount` back in the insert result. */
+router.post(`${TM}/terminal-server`, requireName, (req, res) => {
+  res.status(201).json(insertResult({ portCount: String(req.body.portCount ?? '') }));
+});
+
+/**
+ * The one create observed failing. The service answers **HTTP 200** carrying a
+ * `statusCode: 500` error envelope — the status line and the body disagree, and
+ * that is reproduced rather than corrected. Only the four listed names are
+ * accepted.
+ */
+const CONNECTION_TYPES = ['ssh', 'serial', 'telnet', 'android'];
+
+router.post(`${TM}/connection-type`, requireName, (req, res) => {
+  if (!CONNECTION_TYPES.includes(String(req.body.name).toLowerCase())) {
+    return res.json(data.VLAB_CONNECTION_TYPE_ERROR);
+  }
+  return res.status(201).json(insertResult());
+});
+
+/**
+ * Updates. The status codes differ per resource for no reason visible in the
+ * traffic — 202 for BSP, KVM and network interface, 200 for architecture and
+ * terminal server — so each is pinned to what it returned.
+ */
+const UPDATE_STATUS = {
+  bsp: 202,
+  'network-interface': 202,
+  'info-architecture': 200,
+  'terminal-server': 200,
+};
+
+for (const [segment, status] of Object.entries(UPDATE_STATUS)) {
+  router.put(`${TM}/${segment}/:id`, requireUuid('id'), requireName, (req, res) =>
+    res.status(status).json(updateResult())
+  );
+}
+
+/** KVM's update is the odd one out: 202, and a body with no `data` at all. */
+router.put(`${TM}/kvm/:id`, requireUuid('id'), requireName, (req, res) => {
+  res.status(202).json({ status: 'success' });
+});
+
+/* ---- reservations --------------------------------------------------- */
+
+const RES = '/vlab/api/v4/reservation';
+
+/** This one returns `count` as a STRING; its two siblings return a number. */
+router.get(`${RES}/physical-reservations`, (req, res) => {
+  res.json({
+    status: 'success',
+    count: String(intOr(req.query.count, 50)),
+    offset: String(intOr(req.query.offset, 0)),
+    total: 0,
+    data: data.VLAB_EMPTY,
+  });
+});
+
+for (const segment of ['reservations', 'virtual-reservations']) {
+  router.get(`${RES}/${segment}`, (req, res) => {
+    res.json({
+      status: 'success',
+      count: intOr(req.query.count, 50),
+      offset: intOr(req.query.offset, 0),
+      total: 0,
+      data: data.VLAB_EMPTY,
+    });
+  });
+}
+
+router.get('/vlab/api/reservation/queue/list', (req, res) => {
+  res.json(vlabData(data.VLAB_EMPTY));
+});
+
+/* ---- target control ------------------------------------------------- */
+
+/**
+ * The caller's own lab groups. Unlike the target manager this is not admin-only
+ * — it reports on the caller, so every account may read its own.
+ */
+router.get('/vlab/api/v4/target-control/user/groups', (req, res) => {
+  res.json(vlabData(data.MEMBERSHIP[req.studio.username]));
+});
+
+router.post('/vlab/api/v4/target-control/targets/search', (req, res) => {
+  res.json({
+    status: 'success',
+    count: intOr(req.query.count, 50),
+    offset: intOr(req.query.offset, 0),
+    total: 0,
+    data: data.VLAB_EMPTY,
+  });
+});
+
+router.get('/vlab/api/v1/target-manager/target-action-collections', (req, res) => {
+  res.json({
+    status: 'success',
+    count: 0,
+    offset: intOr(req.query.offset, 0),
+    total: 0,
+    data: data.VLAB_EMPTY,
+  });
+});
+
+/** Virtual target templates. Note `offset` is a string and there is no `total`. */
+router.post('/vlab/api/v4/virtual-target-manager/virtual-targets/search', (req, res) => {
+  res.json({
+    status: 'success',
+    offset: String(intOr(req.query.offset, 0)),
+    count: data.VLAB_VIRTUAL_TARGETS.length,
+    data: data.VLAB_VIRTUAL_TARGETS,
+  });
 });
 
 /* ------------------------------------------------------------------ *

@@ -177,9 +177,16 @@ curl -H "$ADMIN" -H "$AJAX" http://localhost:8443/api/fm/alarm_list             
 ## Second app — Wind River Studio
 
 A runnable mock of every endpoint in
-[second app/second_app_oas.yaml](second%20app/second_app_oas.yaml) — 20 paths, 22
-operations, reconstructed from the `dast.wrstudio.cloud` HAR captures. Same rule as
-above: nothing renamed, added, or dropped. The code lives beside the spec in
+[second app/second_app_oas.yaml](second%20app/second_app_oas.yaml) — **62 paths, 68
+operations**, which is every API call present in the `dast.wrstudio.cloud` HAR captures.
+Same rule as above: nothing renamed, added, or dropped.
+
+| Service | Prefix | Paths | Ops |
+| ------- | ------ | ----- | --- |
+| User Management | `/um/api` | 11 | 12 |
+| Test Automation Framework | `/taf/api` | 10 | 11 |
+| Virtual Lab | `/vlab/api` | 40 | 44 |
+| Portal | `/portal/api` | 1 | 1 | The code lives beside the spec in
 [second app/](second%20app/) — [auth.js](second%20app/auth.js) (bearer tokens),
 [data.js](second%20app/data.js) (fixtures taken from the captured responses) and
 [routes.js](second%20app/routes.js) (the router that [server.js](server.js) mounts).
@@ -254,10 +261,18 @@ The same three rules as the on-prem app, so both surfaces are probed the same wa
 
 1. **Admin-only paths** — `403` for `user` and `viewer`:
    - `GET /um/api/auth/groups`, the full RBAC directory.
-   - **the entire `/vlab/api/v4/target-manager` subtree** — all 14 paths. The refusal
-     is applied by prefix in [second app/auth.js](second%20app/auth.js)
-     (`ADMIN_ONLY_PREFIXES`) before any handler runs, so it cannot be missed off one
-     route by accident, and no payload leaks with the `403`.
+   - **the entire target-manager subtree** — `/vlab/api/v4/target-manager`,
+     `/vlab/api/v1/target-manager` and the unversioned `/vlab/api/target-manager`, 39
+     operations in all, reads and writes alike. The refusal is applied by prefix in
+     [second app/auth.js](second%20app/auth.js) (`ADMIN_ONLY_PREFIXES`) before any
+     handler runs, so it cannot be missed off one route by accident, and no payload
+     leaks with the `403`.
+
+   The rest of the Virtual Lab surface — reservations, target control and the
+   virtual-target catalogue, 29 operations — is open to both roles. Those are what an
+   ordinary account actually uses, and `/vlab/api/v4/target-control/user/groups` reports
+   on the caller's own membership; closing them would make the user account useless
+   rather than merely unprivileged.
 2. **Read-only role** — `viewer` gets `403` on every non-GET, whatever the path.
 3. **Org ownership** — the id-bearing TAF paths and `PUT /um/api/resources/{wrrn}`
    return `403` when the object belongs to another org and `404` when it does not
@@ -314,12 +329,59 @@ Org-owned object ids:
 | GET  | `/vlab/api/v4/target-manager/locations-city/{locationsCityId}` | — | ✅ | ⛔ 403 |
 | GET  | `/vlab/api/v4/target-manager/network-interfaces` | — | ✅ | ⛔ 403 |
 | GET  | `/vlab/api/v4/target-manager/pdus` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/state` | `offset`, `count` | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/states/{stateId}` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/targets` | `offset`, `count` | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/boot-servers` | `offset`, `count` | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/terminal-server` | `offset`, `count` | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/target-manager/city` | `offset`, `count` | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v1/target-manager/target-action-collections` | `offset`, `limit` | ✅ | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/bsp` | JSON: `name` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/info-architecture` | JSON: `name` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/lab` | JSON: `name`, `locationId` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/network-interface` | JSON: `name` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/country` | JSON: `name` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/state` | JSON: `name`, `countryId` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/location` | JSON: `name`, `cityId` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/kvm` | JSON: `name`, `vncIpAddress`, … | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/target-manager/city` | JSON: `name`, `stateId`, `countryId` | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/terminal-server` | JSON: `name`, `portCount`, … | ✅ 201 | ⛔ 403 |
+| POST | `/vlab/api/v4/target-manager/connection-type` | JSON: `name` | ✅ 200 | ⛔ 403 |
+| PUT  | `/vlab/api/v4/target-manager/bsp/{bspId}` | JSON: `name` | ✅ 202 | ⛔ 403 |
+| PUT  | `/vlab/api/v4/target-manager/network-interface/{id}` | JSON: `name` | ✅ 202 | ⛔ 403 |
+| PUT  | `/vlab/api/v4/target-manager/kvm/{kvmId}` | JSON: `name`, … | ✅ 202 | ⛔ 403 |
+| PUT  | `/vlab/api/v4/target-manager/info-architecture/{id}` | JSON: `name` | ✅ 200 | ⛔ 403 |
+| PUT  | `/vlab/api/v4/target-manager/terminal-server/{id}` | JSON: `name`, … | ✅ 200 | ⛔ 403 |
+| GET  | `/vlab/api/v4/reservation/reservations` | `type`, `offset`, `count` | ✅ | ✅ |
+| GET  | `/vlab/api/v4/reservation/physical-reservations` | `type`, `offset`, `count`, `username` | ✅ | ✅ |
+| GET  | `/vlab/api/v4/reservation/virtual-reservations` | `type`, `offset`, `count`, `username` | ✅ | ✅ |
+| GET  | `/vlab/api/reservation/queue/list` | — | ✅ | ✅ |
+| GET  | `/vlab/api/v4/target-control/user/groups` | — | ✅ | ✅ |
+| POST | `/vlab/api/v4/target-control/targets/search` | JSON: `filters`, … | ✅ | ✅ |
+| POST | `/vlab/api/v4/virtual-target-manager/virtual-targets/search` | JSON: `sim_type`, `orderBy` | ✅ | ✅ |
 
-The `user` account gets the same `403` as `viewer` on every `/vlab` row — the subtree is
-admin-only, not org-scoped, so both non-admin roles are refused identically. Two of the
-paths take an id: `/cities/{cityId}` is passed a **state** id and returns that state's
-cities (the platform's naming, kept as observed), while `/locations-city/{id}` really is
-a city id. Both answer `400` when the id is not a UUID.
+On the target-manager rows the `user` account gets the same `403` as `viewer` — that
+subtree is admin-only rather than org-scoped, so both non-admin roles are refused
+identically. Two paths take an id that is not what its name suggests:
+`/cities/{cityId}` is passed a **state** id and returns that state's cities, while
+`/locations-city/{id}` really is a city id. Both answer `400` when the id is not a UUID.
+
+The write responses are worth knowing before you assert on them, because the service is
+not consistent and the mock reproduces it rather than tidying it up:
+
+- Creates return **two different shapes**. BSP, architecture, lab, network interface and
+  terminal server return an ORM insert result — the same row three times over, as
+  `identifiers`, camelCase `generatedMaps` and snake_case `raw`. Country, state,
+  location, KVM and city return a bare `{"id": "…"}`.
+- Update status codes differ per resource for no visible reason: `202` for BSP, network
+  interface and KVM, `200` for architecture and terminal server. KVM's update is the only
+  one whose body has no `data` member at all.
+- `POST /vlab/api/v4/target-manager/connection-type` accepts only `ssh`, `serial`,
+  `telnet` and `android`. Anything else answers **HTTP 200** carrying a body whose own
+  `statusCode` is `500` — the status line and the payload disagree, exactly as captured.
+- Paging counters are typed inconsistently: `/v4/target-manager/*` returns `offset` as a
+  string and `count` as a number; `/v4/reservation/physical-reservations` returns both as
+  strings; `/v4/reservation/reservations` and the `/v1` route return both as numbers.
 
 `POST /um/api/auth/users/signIn/verification` is the one operation the spec marks
 `security: []` — the refresh token in the body is the credential. Each account's bearer

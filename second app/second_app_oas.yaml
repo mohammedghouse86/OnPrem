@@ -235,6 +235,22 @@ paths:
                     name: taf-admin-group
                   - id: 9fed1194-53dc-4059-90fb-034253acec10
                     name: vlab-starter-group
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          description: |
+            Forbidden. A caller may read its own memberships; reading another account's
+            requires being an admin of that account's organisation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '404':
+          description: No such user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
 
   /um/api/auth/groups:
     get:
@@ -271,6 +287,10 @@ paths:
                                   $ref: '#/components/schemas/Group'
         '304':
           $ref: '#/components/responses/NotModified'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
 
   # ---------------------------------------------------------- UM: components --
   /um/api/components:
@@ -1042,6 +1062,39 @@ paths:
         '403':
           $ref: '#/components/responses/AdminOnly'
 
+    post:
+      tags: [Virtual Lab]
+      summary: Create a KVM switch
+      operationId: createVlabKvm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabKvmRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabIdResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
   /vlab/api/v4/target-manager/labs:
     get:
       tags: [Virtual Lab]
@@ -1210,6 +1263,1029 @@ paths:
         '403':
           $ref: '#/components/responses/AdminOnly'
 
+  /taf/api/v3/projects/{projectId}/targets:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+    get:
+      tags: [TAF Projects]
+      summary: List a project's targets
+      operationId: listTafProjectTargets
+      description: Empty in every observed call, so the element shape is unknown.
+      responses:
+        '200':
+          description: The list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TafV3Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {}
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /taf/api/v3/projects/{projectId}/test-code-collections:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+    get:
+      tags: [TAF Projects]
+      summary: List a project's test code collections
+      operationId: listTafTestCodeCollections
+      description: Empty in every observed call, so the element shape is unknown.
+      responses:
+        '200':
+          description: The list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TafV3Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {}
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v4/target-manager/state:
+    get:
+      tags: [Virtual Lab]
+      summary: List states
+      operationId: listVlabStates
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Paged list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabState'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+    post:
+      tags: [Virtual Lab]
+      summary: Create a state
+      operationId: createVlabState
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabStateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabIdResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/targets:
+    get:
+      tags: [Virtual Lab]
+      summary: List targets
+      operationId: listVlabTargets
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Paged list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/boot-servers:
+    get:
+      tags: [Virtual Lab]
+      summary: List boot servers
+      operationId: listVlabBootServers
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Paged list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/terminal-server:
+    get:
+      tags: [Virtual Lab]
+      summary: List terminal servers
+      operationId: listVlabTerminalServers
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Paged list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabTerminalServer'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+    post:
+      tags: [Virtual Lab]
+      summary: Create a terminal server
+      operationId: createVlabTerminalServer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabTerminalServerRequest'
+      responses:
+        '201':
+          description: |
+            Created. The insert result carries `portCount` back as a string even when the
+            request sent a number.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabInsertResult'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/target-manager/city:
+    get:
+      tags: [Virtual Lab]
+      summary: List cities (unversioned route)
+      operationId: listVlabCityList
+      description: |
+        Note the missing `/v4` segment. The SPA calls this older unversioned route
+        alongside the v4 ones, so both are served.
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Paged list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabCity'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+    post:
+      tags: [Virtual Lab]
+      summary: Create a city (unversioned route)
+      operationId: createVlabCity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCityRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabIdResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/states/{stateId}:
+    parameters:
+      - name: stateId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        example: 71790855-cdc0-42b1-807d-c742a3cf651b
+    get:
+      tags: [Virtual Lab]
+      summary: Get a state
+      operationId: getVlabState
+      description: |
+        Returns an array rather than a single object, and each row keys the id as
+        `stateId` rather than the `id` its sibling reads use.
+      responses:
+        '200':
+          description: The state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabStateRef'
+        '400':
+          description: "`stateId` is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/bsp:
+    post:
+      tags: [Virtual Lab]
+      summary: Create a board support package
+      operationId: createVlabBsp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabInsertResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/info-architecture:
+    post:
+      tags: [Virtual Lab]
+      summary: Create an architecture
+      operationId: createVlabInfoArchitecture
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabInsertResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/lab:
+    post:
+      tags: [Virtual Lab]
+      summary: Create a lab
+      operationId: createVlabLab
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabInsertResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/network-interface:
+    post:
+      tags: [Virtual Lab]
+      summary: Create a network interface
+      operationId: createVlabNetworkInterface
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabInsertResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/country:
+    post:
+      tags: [Virtual Lab]
+      summary: Create a country
+      operationId: createVlabCountry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabIdResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/location:
+    post:
+      tags: [Virtual Lab]
+      summary: Create a location
+      operationId: createVlabLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabLocationRequest'
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabIdResult'
+        '400':
+          description: "`name` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/connection-type:
+    post:
+      tags: [Virtual Lab]
+      summary: Create a connection type
+      operationId: createVlabConnectionType
+      description: |
+        Only `ssh`, `serial`, `telnet` and `android` are accepted. A rejected name
+        answers **HTTP 200** carrying a body whose own `statusCode` is 500 — the status
+        line and the payload disagree, which is what the service does, so it is
+        reproduced rather than corrected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '200':
+          description: |
+            The name was refused. This is the only outcome observed in the capture.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VlabServiceError'
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabInsertResult'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/bsp/{bspId}:
+    parameters:
+      - name: bspId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Virtual Lab]
+      summary: Update a board support package
+      operationId: updateVlabBsp
+      description: |
+        Answers `202`. The status codes differ across these updates for no reason
+        visible in the traffic — 202 for BSP and network interface, 200 for architecture
+        and terminal server — so each is documented as observed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '202':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabUpdateResult'
+        '400':
+          description: "`bspId` is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/network-interface/{networkInterfaceId}:
+    parameters:
+      - name: networkInterfaceId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Virtual Lab]
+      summary: Update a network interface
+      operationId: updateVlabNetworkInterface
+      description: |
+        Answers `202`. The status codes differ across these updates for no reason
+        visible in the traffic — 202 for BSP and network interface, 200 for architecture
+        and terminal server — so each is documented as observed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '202':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabUpdateResult'
+        '400':
+          description: "`networkInterfaceId` is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/info-architecture/{infoArchitectureId}:
+    parameters:
+      - name: infoArchitectureId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Virtual Lab]
+      summary: Update an architecture
+      operationId: updateVlabInfoArchitecture
+      description: |
+        Answers `200`. The status codes differ across these updates for no reason
+        visible in the traffic — 202 for BSP and network interface, 200 for architecture
+        and terminal server — so each is documented as observed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabUpdateResult'
+        '400':
+          description: "`infoArchitectureId` is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/terminal-server/{terminalServerId}:
+    parameters:
+      - name: terminalServerId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Virtual Lab]
+      summary: Update a terminal server
+      operationId: updateVlabTerminalServer
+      description: |
+        Answers `200`. The status codes differ across these updates for no reason
+        visible in the traffic — 202 for BSP and network interface, 200 for architecture
+        and terminal server — so each is documented as observed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabCreateRequest'
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabUpdateResult'
+        '400':
+          description: "`terminalServerId` is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/kvm/{kvmId}:
+    parameters:
+      - name: kvmId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Virtual Lab]
+      summary: Update a KVM switch
+      operationId: updateVlabKvm
+      description: |
+        The odd one out among the updates: `202`, and a body carrying only `status`
+        with no `data` member at all.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabKvmRequest'
+      responses:
+        '202':
+          description: Updated. No `data` member.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+        '400':
+          description: "`kvmId` is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/reservation/reservations:
+    get:
+      tags: [Virtual Lab]
+      summary: List reservations
+      operationId: listVlabReservations
+      parameters:
+        - { name: type, in: query, schema: { type: string, example: current } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 50 } }
+        - { name: username, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paged reservation list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  count: { type: integer }
+                  offset: { type: integer }
+                  total: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items:
+                      description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v4/reservation/physical-reservations:
+    get:
+      tags: [Virtual Lab]
+      summary: List physical reservations
+      operationId: listVlabPhysicalReservations
+      description: |
+        This route returns **both** `count` and `offset` as strings where its two
+        siblings return both as numbers. The inconsistency is the service's.
+      parameters:
+        - { name: type, in: query, schema: { type: string, example: current } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 50 } }
+        - { name: username, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paged reservation list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  count: { type: string }
+                  offset: { type: string }
+                  total: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items:
+                      description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v4/reservation/virtual-reservations:
+    get:
+      tags: [Virtual Lab]
+      summary: List virtual reservations
+      operationId: listVlabVirtualReservations
+      parameters:
+        - { name: type, in: query, schema: { type: string, example: current } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 50 } }
+        - { name: username, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Paged reservation list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  count: { type: integer }
+                  offset: { type: integer }
+                  total: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items:
+                      description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/reservation/queue/list:
+    get:
+      tags: [Virtual Lab]
+      summary: List the reservation queue
+      operationId: listVlabReservationQueue
+      responses:
+        '200':
+          description: Queue entries. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v4/target-control/user/groups:
+    get:
+      tags: [Virtual Lab]
+      summary: List the caller's lab groups
+      operationId: listVlabUserGroups
+      description: |
+        Reports the caller's own membership, so unlike the target manager this is open
+        to every role.
+      responses:
+        '200':
+          description: The caller's groups.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GroupRef'
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v4/target-control/targets/search:
+    post:
+      tags: [Virtual Lab]
+      summary: Search targets
+      operationId: searchVlabTargets
+      description: Paging is carried in the query string; the body holds the filters.
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 50 } }
+        - { name: field, in: query, schema: { type: string, default: name } }
+        - { name: orderBy, in: query, schema: { type: string, enum: [ASC, DESC], default: ASC } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabTargetSearchRequest'
+      responses:
+        '200':
+          description: Paged target list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  count: { type: integer }
+                  offset: { type: integer }
+                  total: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items:
+                      description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v4/virtual-target-manager/virtual-targets/search:
+    post:
+      tags: [Virtual Lab]
+      summary: Search virtual target templates
+      operationId: searchVlabVirtualTargets
+      description: |
+        The largest response in the capture at 57 KB — every row embeds a full
+        `vlab_config` template. Note the envelope carries no `total`, and `offset` is a
+        string.
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: count, in: query, schema: { type: integer, default: 50 } }
+        - { name: field, in: query, schema: { type: string, default: name } }
+        - { name: type, in: query, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VlabVirtualTargetSearchRequest'
+      responses:
+        '200':
+          description: Virtual target templates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  offset: { type: string, example: "0" }
+                  count: { type: integer, example: 13 }
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VlabVirtualTarget'
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /vlab/api/v1/target-manager/target-action-collections:
+    get:
+      tags: [Virtual Lab]
+      summary: List target action collections
+      operationId: listVlabTargetActionCollections
+      description: |
+        The only `/v1` route in the capture. It sits under `target-manager`, so the
+        admin-only rule covers it. Note it pages with `limit`, not `count`.
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+      responses:
+        '200':
+          description: Paged list. Empty in the capture; both counters are numbers.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  count: { type: integer }
+                  offset: { type: integer }
+                  total: { type: integer, example: 0 }
+                  data:
+                    type: array
+                    items:
+                      description: Shape unknown — only empty arrays were observed.
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
 ################################################################################
 # COMPONENTS
 ################################################################################
@@ -1371,6 +2447,234 @@ components:
                   field: params.projectId
 
   schemas:
+
+    VlabStateRef:
+      type: object
+      description: |
+        The row `/states/{stateId}` returns. Note the id is keyed `stateId`, not `id`.
+      properties:
+        stateId: { type: string, format: uuid, example: 71790855-cdc0-42b1-807d-c742a3cf651b }
+        name: { type: string, example: test state }
+
+    VlabTerminalServer:
+      type: object
+      properties:
+        id: { type: string, format: uuid, example: a9f719c7-13d6-4e7e-a407-27c9744a36c7 }
+        name: { type: string, example: test }
+        username: { type: string, example: usernamw }
+        password:
+          type: string
+          description: |
+            Returned as the literal string `[REDACTED]` in the capture. No real
+            credential was on the wire, and none is in this file.
+          example: "[REDACTED]"
+        ipv4Address: { type: string, example: 12.12.12.12 }
+        subnetMask: { type: string, example: 255.255.255.0 }
+        ipv6Address: { type: string, nullable: true }
+        fqdnAddress: { type: string, nullable: true }
+        portCount:
+          type: string
+          description: A string on the way out, even when the create sent a number.
+          example: "8080"
+        createdDate: { type: string, format: date-time }
+        modifiedDate: { type: string, format: date-time, nullable: true }
+        createdBy: { type: string, example: testadmin01 }
+        modifiedBy: { type: string, nullable: true, example: testadmin01 }
+
+    VlabVirtualTarget:
+      type: object
+      description: A virtual target template. Each row embeds its whole `vlab_config`.
+      properties:
+        id: { type: string, format: uuid, example: e343da68-4622-40b0-8078-082a0e342d9f }
+        isDeleted: { type: boolean, example: false }
+        createdBy: { type: string, example: vt-admin }
+        favorite: { type: boolean, example: false }
+        isReservable: { type: boolean, example: true }
+        template:
+          type: object
+          properties:
+            vlab_config:
+              type: object
+              description: |
+                Free-form map of setting name to descriptor. Each descriptor carries
+                `description`, `read_only`, `required` and, variously, `value`,
+                `default` and `ui_order`.
+              additionalProperties: true
+
+    # ------------------------------------------------------ vlab writes --
+    VlabCreateRequest:
+      type: object
+      description: |
+        The create and update body shared by most of the target-manager resources.
+        `name` is the only field every one of them requires.
+      required: [name]
+      properties:
+        name: { type: string, example: test_bsp }
+
+    VlabStateRequest:
+      allOf:
+        - $ref: '#/components/schemas/VlabCreateRequest'
+        - type: object
+          properties:
+            countryId: { type: string, format: uuid, example: f2b5fef5-ef9c-4af5-8513-bff02f0a34fa }
+
+    VlabCityRequest:
+      allOf:
+        - $ref: '#/components/schemas/VlabCreateRequest'
+        - type: object
+          properties:
+            countryId: { type: string, format: uuid, example: f2b5fef5-ef9c-4af5-8513-bff02f0a34fa }
+            stateId: { type: string, format: uuid, example: 71790855-cdc0-42b1-807d-c742a3cf651b }
+
+    VlabLocationRequest:
+      allOf:
+        - $ref: '#/components/schemas/VlabCreateRequest'
+        - type: object
+          properties:
+            cityId: { type: string, format: uuid, example: 3d509f2d-086c-45b6-bc46-ee9af468ea41 }
+
+    VlabKvmRequest:
+      allOf:
+        - $ref: '#/components/schemas/VlabCreateRequest'
+        - type: object
+          properties:
+            url: { type: string, nullable: true }
+            vncIpAddress: { type: string, example: 12.12.12.12 }
+            ldapEnabled: { type: boolean, example: false }
+            username: { type: string, example: username }
+            password:
+              type: string
+              format: password
+              description: Placeholder only — no real credential belongs in this file.
+              example: "[REDACTED]"
+
+    VlabTerminalServerRequest:
+      allOf:
+        - $ref: '#/components/schemas/VlabCreateRequest'
+        - type: object
+          properties:
+            username: { type: string, example: usernamw }
+            password:
+              type: string
+              format: password
+              description: Placeholder only — no real credential belongs in this file.
+              example: "[REDACTED]"
+            ipv4Address: { type: string, example: 12.12.12.12 }
+            subnetMask: { type: string, example: 255.255.255.0 }
+            ipv6Address: { type: string, nullable: true }
+            fqdnAddress: { type: string, nullable: true }
+            portCount:
+              description: |
+                Sent as a number on create and as a string on update; returned as a
+                string either way.
+              oneOf:
+                - { type: integer, example: 8080 }
+                - { type: string, example: "8080" }
+
+    VlabTargetSearchRequest:
+      type: object
+      properties:
+        filters:
+          type: object
+          description: Only the empty object was observed; the filter keys are unknown.
+          additionalProperties: true
+        offset: { type: integer, example: 0 }
+        count: { type: integer, example: 50 }
+        field: { type: string, example: name }
+        orderBy: { type: string, enum: [ASC, DESC], example: ASC }
+        labConnect: { type: boolean, example: true }
+
+    VlabVirtualTargetSearchRequest:
+      type: object
+      properties:
+        sim_type:
+          type: array
+          items: { type: string }
+          example: [QEMU]
+        orderBy:
+          type: object
+          properties:
+            field: { type: string, example: name }
+            type: { type: string, enum: [ASC, DESC], example: ASC }
+
+    VlabInsertResult:
+      type: object
+      description: |
+        The insert result the ORM behind the service returns verbatim. It reports the
+        same row three times over — `identifiers`, then `generatedMaps` in camelCase,
+        then `raw` in snake_case.
+      properties:
+        identifiers:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+        generatedMaps:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              createdDate: { type: string, format: date-time }
+              modifiedDate: { type: string, format: date-time }
+        raw:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              created_date: { type: string, format: date-time }
+              modified_date: { type: string, format: date-time }
+
+    VlabIdResult:
+      type: object
+      description: |
+        The other create result: just the new id. Which endpoints use this and which
+        use `VlabInsertResult` is not predictable from the resource — each is
+        documented as observed.
+      properties:
+        id: { type: string, format: uuid, example: f2b5fef5-ef9c-4af5-8513-bff02f0a34fa }
+
+    VlabUpdateResult:
+      type: object
+      properties:
+        generatedMaps:
+          type: array
+          items: {}
+          description: Empty in every observed update.
+        raw:
+          type: array
+          items: {}
+          description: Empty in every observed update.
+        affected:
+          type: integer
+          description: Number of rows changed.
+          example: 1
+
+    VlabServiceError:
+      type: object
+      description: |
+        The error body the connection-type create returns. It arrives with an HTTP
+        **200** status line while carrying `statusCode: 500` in the payload.
+      properties:
+        statusCode: { type: integer, example: 500 }
+        response:
+          type: object
+          properties:
+            $statusCode: { type: integer, example: 500 }
+            status: { type: string, example: error }
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  message: { type: string }
+                  detail: { type: string }
+                  code: { type: string, example: "45501" }
+            errorMessages:
+              type: array
+              items: { type: string }
 
     # ------------------------------------------------------------- vlab --
     VlabListEnvelope:

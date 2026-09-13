@@ -1190,6 +1190,229 @@ const VLAB_NETWORK_INTERFACES = [
 
 const VLAB_PDUS = [];
 
+/* ------------------------------------------------------------------ *
+ * Virtual Lab — the rest of the captured surface
+ *
+ * Reservations, target control and the target-manager writes. Note the envelope
+ * is not consistent across these services and the inconsistency is preserved:
+ * `/v4/target-manager/*` returns `offset` as a string and `count` as a number,
+ * `/v4/reservation/physical-reservations` returns BOTH as strings, and
+ * `/v4/reservation/reservations` and `/v1/target-action-collections` return both
+ * as numbers.
+ *
+ * Every collection that came back empty in the capture is left empty here — no
+ * row is invented for a shape that was never seen on the wire.
+ * ------------------------------------------------------------------ */
+
+/** Collections observed empty. Their element shape is unknown. */
+const VLAB_EMPTY = [];
+
+const VLAB_STATES = [
+  {
+    id: '71790855-cdc0-42b1-807d-c742a3cf651b',
+    name: 'test state',
+    isDeleted: false,
+    country: {
+      id: 'f2b5fef5-ef9c-4af5-8513-bff02f0a34fa',
+      name: 'test country',
+      isDeleted: false
+    }
+  }
+];
+
+const VLAB_CITY_LIST = [
+  {
+    id: '3d509f2d-086c-45b6-bc46-ee9af468ea41',
+    name: 'test city',
+    isDeleted: false,
+    state: {
+      id: '71790855-cdc0-42b1-807d-c742a3cf651b',
+      name: 'test state',
+      isDeleted: false,
+      country: {
+        id: 'f2b5fef5-ef9c-4af5-8513-bff02f0a34fa',
+        name: 'test country',
+        isDeleted: false
+      }
+    }
+  }
+];
+
+const VLAB_STATE_BY_ID = [
+  {
+    stateId: '71790855-cdc0-42b1-807d-c742a3cf651b',
+    name: 'test state'
+  }
+];
+
+const VLAB_TERMINAL_SERVERS = [
+  {
+    id: 'a9f719c7-13d6-4e7e-a407-27c9744a36c7',
+    name: 'test',
+    username: 'usernamw',
+    password: '[REDACTED]',
+    ipv4Address: '12.12.12.12',
+    subnetMask: '255.255.255.0',
+    ipv6Address: null,
+    fqdnAddress: null,
+    portCount: '8080',
+    createdDate: '2026-09-10T16:20:06.699Z',
+    modifiedDate: '2026-09-10T16:20:17.481Z',
+    createdBy: 'testadmin01',
+    modifiedBy: 'testadmin01'
+  }
+];
+
+const VLAB_USER_GROUPS = [
+  {
+    id: '5096263a-3edf-4d93-9cad-b36ab2c09414',
+    name: 'hive-admin-group'
+  },
+  {
+    id: '2d81226a-832a-41cb-a1e1-e18859707db3',
+    name: 'license-admin-group'
+  },
+  {
+    id: '91496d44-b02e-4d04-9695-daee833443fe',
+    name: 'platformhealth-admin-group'
+  },
+  {
+    id: '140669b7-4580-4a29-b729-32712c3e2769',
+    name: 'plm-task-library-viewer-group'
+  },
+  {
+    id: 'd0e95e5e-315f-4bde-b70c-b3da315b56f6',
+    name: 'slc-admin-group'
+  },
+  {
+    id: '10c3c4af-5697-4227-83c4-beeca2c235e5',
+    name: 'taf-admin-group'
+  },
+  {
+    id: '753b3983-fec9-4bb0-b29f-c4d5f72933ef',
+    name: 'usp-admin-group'
+  },
+  {
+    id: 'eda2b9cf-c21c-4791-b93b-563325f8dd14',
+    name: 'vault-admin-group'
+  },
+  {
+    id: '9fed1194-53dc-4059-90fb-034253acec10',
+    name: 'vlab-starter-group'
+  }
+];
+
+const VLAB_VIRTUAL_TARGETS = [
+  {
+    id: 'e343da68-4622-40b0-8078-082a0e342d9f',
+    template: {
+      vlab_config: {
+        CPU: {
+          description: 'core type',
+          read_only: true,
+          required: false,
+          ui_order: -1,
+          value: 'x86'
+        },
+        VT_OS_IMAGE: {
+          default: './vxWorks',
+          description: 'VxWorks kernel image',
+          read_only: false,
+          required: false,
+          ui_order: 0
+        },
+        architecture: {
+          description: 'architecture of target',
+          read_only: true,
+          required: false,
+          value: 'x86 Generic'
+        },
+        artifact_files: {
+          default: 'VT_OS_IMAGE',
+          description: 'List of artifact files will be used in artifact_path',
+          read_only: false,
+          required: false,
+          ui_order: 0
+        },
+        artifact_path: {
+          default: 'path/to/artifacts',
+          description: 'Path to artifacts',
+          read_only: false,
+          required: false,
+          ui_order: 0
+        }
+      }
+    },
+    isDeleted: false,
+    createdBy: 'vt-admin',
+    favorite: false,
+    isReservable: true
+  },
+  {
+    id: '6fd5b82e-b7ef-4441-8d1e-f5c454352f41',
+    template: {
+      vlab_config: {
+        CPU: {
+          description: 'core type',
+          read_only: true,
+          required: false,
+          ui_order: -1,
+          value: 'x86'
+        },
+        VT_OS_IMAGE: {
+          default: './vxWorks',
+          description: 'VxWorks kernel image',
+          read_only: false,
+          required: false,
+          ui_order: 0
+        },
+        architecture: {
+          description: 'architecture of target',
+          read_only: true,
+          required: false,
+          value: 'x86 Generic'
+        },
+        artifact_files: {
+          default: 'VT_OS_IMAGE',
+          description: 'List of artifact files will be used in artifact_path',
+          read_only: false,
+          required: false,
+          ui_order: 0
+        },
+        artifact_path: {
+          default: 'path/to/artifacts',
+          description: 'Path to artifacts',
+          read_only: false,
+          required: false,
+          ui_order: 0
+        }
+      }
+    },
+    isDeleted: false,
+    createdBy: 'vt-admin',
+    favorite: false,
+    isReservable: true
+  }
+];
+
+const VLAB_CONNECTION_TYPE_ERROR = {
+  statusCode: 500,
+  response: {
+    $statusCode: 500,
+    status: 'error',
+    errors: [
+      {
+        message: 'The specified connection type is not permitted. The allowed connection types are ssh, serial, telnet and android.',
+        detail: 'Key (name)=not allowed type.',
+        code: '45501'
+      }
+    ],
+    errorMessages: [
+      'The specified connection type is not permitted. The allowed connection types are ssh, serial, telnet and android.'
+    ]
+  }
+};
+
 module.exports = {
   ORGS,
   GROUPS,
@@ -1221,6 +1444,14 @@ module.exports = {
   VLAB_LOCATIONS_BY_CITY,
   VLAB_NETWORK_INTERFACES,
   VLAB_PDUS,
+  VLAB_EMPTY,
+  VLAB_STATES,
+  VLAB_CITY_LIST,
+  VLAB_STATE_BY_ID,
+  VLAB_TERMINAL_SERVERS,
+  VLAB_USER_GROUPS,
+  VLAB_VIRTUAL_TARGETS,
+  VLAB_CONNECTION_TYPE_ERROR,
   ENVIRONMENT_WRRN,
   LOCATION_WRRN,
   PORTAL_WRRN,
