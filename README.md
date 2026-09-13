@@ -12,7 +12,7 @@ They are kept apart by path prefix and by credential, and each keeps its own spe
 | App | Spec | Paths | Credential |
 | --- | ---- | ----- | ---------- |
 | On-prem (this document) | [onpremtest.yaml](onpremtest.yaml), served at `/openapi.yaml` | everything except the prefixes opposite | session cookie + `X-CSRFToken` + `X-Requested-With` |
-| Studio ("second app") | [second app/second_app_oas.yaml](second%20app/second_app_oas.yaml), served at `/second-app-openapi.yaml` | `/um/api`, `/portal/api`, `/taf/api` | `Authorization: Bearer <token>` |
+| Studio ("second app") | [second app/second_app_oas.yaml](second%20app/second_app_oas.yaml), served at `/second-app-openapi.yaml` | `/um/api`, `/portal/api`, `/taf/api`, `/vlab/api` | `Authorization: Bearer <token>` |
 
 No path in either spec begins with a prefix belonging to the other, so no request is
 ambiguous. Neither app recognises the other's credential: a Studio token on an on-prem
@@ -252,8 +252,12 @@ as the contract specifies.
 
 The same three rules as the on-prem app, so both surfaces are probed the same way:
 
-1. **Admin-only paths** — `GET /um/api/auth/groups`, the full RBAC directory, is `403`
-   for `user` and `viewer`.
+1. **Admin-only paths** — `403` for `user` and `viewer`:
+   - `GET /um/api/auth/groups`, the full RBAC directory.
+   - **the entire `/vlab/api/v4/target-manager` subtree** — all 14 paths. The refusal
+     is applied by prefix in [second app/auth.js](second%20app/auth.js)
+     (`ADMIN_ONLY_PREFIXES`) before any handler runs, so it cannot be missed off one
+     route by accident, and no payload leaks with the `403`.
 2. **Read-only role** — `viewer` gets `403` on every non-GET, whatever the path.
 3. **Org ownership** — the id-bearing TAF paths and `PUT /um/api/resources/{wrrn}`
    return `403` when the object belongs to another org and `404` when it does not
@@ -296,6 +300,26 @@ Org-owned object ids:
 | GET  | `/taf/api/v4/projects/{projectId}/plugins` | — | ✅ own org | ✅ own org |
 | POST | `/taf/api/v4/projects/{projectId}/test-plans` | JSON: `name`, `projectId`, … | ✅ own org | ⛔ 403 |
 | GET  | `/taf/api/v4/projects/{projectId}/test-plans/{testPlanId}` | — | ✅ own org | ✅ own org |
+| GET  | `/vlab/api/v4/target-manager/bsps` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/checkrbac` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/cities/{cityId}` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/connection-types` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/countries` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/cpus` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/info-architectures` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/kvm` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/labs` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/labs-locations` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/locations` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/locations-city/{locationsCityId}` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/network-interfaces` | — | ✅ | ⛔ 403 |
+| GET  | `/vlab/api/v4/target-manager/pdus` | — | ✅ | ⛔ 403 |
+
+The `user` account gets the same `403` as `viewer` on every `/vlab` row — the subtree is
+admin-only, not org-scoped, so both non-admin roles are refused identically. Two of the
+paths take an id: `/cities/{cityId}` is passed a **state** id and returns that state's
+cities (the platform's naming, kept as observed), while `/locations-city/{id}` really is
+a city id. Both answer `400` when the id is not a UUID.
 
 `POST /um/api/auth/users/signIn/verification` is the one operation the spec marks
 `security: []` — the refresh token in the body is the credential. Each account's bearer
@@ -325,6 +349,17 @@ curl -H 'accept: application/json, text/plain, */*' -H "authorization: Bearer $T
 curl -H "authorization: Bearer $TOKEN" http://localhost:8443/taf/api/v3/projects
 curl -H "authorization: Bearer $TOKEN" http://localhost:8443/um/api/auth/groups          # 200 for admin
 curl http://localhost:8443/um/api/resources                                              # 401, no token
+```
+
+The admin-only rule, with the static cookie as the only credential — no `Authorization`
+header at all, which is the form a scanner registers:
+
+```bash
+ADMIN="cookie: authCookiePart0=$TOKEN; languageCookie=en-US"
+USER="cookie: authCookiePart0=$USER_TOKEN; languageCookie=en-US"
+
+curl -s -o /dev/null -w '%{http_code}\n' -H "$ADMIN" http://localhost:8443/vlab/api/v4/target-manager/labs   # 200
+curl -s -o /dev/null -w '%{http_code}\n' -H "$USER"  http://localhost:8443/vlab/api/v4/target-manager/labs   # 403
 ```
 
 ## Deploy on Render

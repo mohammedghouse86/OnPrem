@@ -82,6 +82,16 @@ const READ_ONLY_ROLES = ['viewer'];
 /** Paths only an org admin may reach. Listing the whole RBAC directory is one. */
 const ADMIN_ONLY_PATHS = ['/um/api/auth/groups'];
 
+/**
+ * Whole subtrees only an org admin may reach — matched by prefix, so the
+ * id-bearing paths beneath them are covered without being listed one by one.
+ *
+ * The Virtual Lab target manager is the lab's hardware and site inventory.
+ * Every read under it is admin-only: a non-admin account gets 403 on all of it,
+ * which is the matrix this mock is meant to reproduce.
+ */
+const ADMIN_ONLY_PREFIXES = ['/vlab/api/v4/target-manager'];
+
 /* ------------------------------------------------------------------ *
  * Cookie transport
  * ------------------------------------------------------------------ */
@@ -150,6 +160,12 @@ function cookieHeaderFor(token) {
  * Middleware
  * ------------------------------------------------------------------ */
 
+/** True when the path is reserved to the admin role, exactly or by subtree. */
+function isAdminOnly(path) {
+  if (ADMIN_ONLY_PATHS.includes(path)) return true;
+  return ADMIN_ONLY_PREFIXES.some((p) => path === p || path.startsWith(p + '/'));
+}
+
 /** Every failure from this app uses the User Management error envelope. */
 function fail(res, status, message) {
   return res.status(status).json({ success: false, data: null, correlationId: null, message });
@@ -195,7 +211,7 @@ function authenticate(req, res, next) {
 
   req.studio = { ...account, token };
 
-  if (account.role !== 'admin' && ADMIN_ONLY_PATHS.includes(req.path)) {
+  if (account.role !== 'admin' && isAdminOnly(req.path)) {
     return fail(res, 403, `Role '${account.role}' is not permitted to access ${req.path}.`);
   }
 
@@ -230,6 +246,7 @@ function requireSameOrg(getOwnerOrg, describe) {
 module.exports = {
   ACCOUNTS,
   ADMIN_ONLY_PATHS,
+  ADMIN_ONLY_PREFIXES,
   ADMIN_TOKEN,
   CHUNK_SIZE,
   COOKIE,
@@ -240,6 +257,7 @@ module.exports = {
   authenticate,
   cookieHeaderFor,
   fail,
+  isAdminOnly,
   parseCookies,
   requireSameOrg,
   toCookieParts,

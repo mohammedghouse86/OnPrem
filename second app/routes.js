@@ -26,7 +26,7 @@ const router = express.Router();
  * handed straight back to the on-prem app mounted behind this router, so the
  * two surfaces never see each other's traffic — or each other's credentials.
  */
-const PREFIXES = ['/um/api', '/portal/api', '/taf/api'];
+const PREFIXES = ['/um/api', '/portal/api', '/taf/api', '/vlab/api'];
 
 router.use((req, res, next) => {
   const mine = PREFIXES.some((p) => req.path === p || req.path.startsWith(p + '/'));
@@ -530,6 +530,81 @@ router.get(
     return res.json(taf4({ ...rest, testSuites: [] }));
   }
 );
+
+/* ------------------------------------------------------------------ *
+ * Virtual Lab — target manager
+ *
+ * Admin-only, the whole subtree. The 403 for every other role is applied in
+ * auth.js via ADMIN_ONLY_PREFIXES, before any of these handlers runs, so the
+ * rule cannot be missed off one route by accident.
+ * ------------------------------------------------------------------ */
+
+const TM = '/vlab/api/v4/target-manager';
+
+/**
+ * The list envelope: a count/offset/total wrapper in which `offset` is a
+ * string, not a number. That is what the service returns.
+ */
+const vlabList = (rows) => ({
+  status: 'success',
+  count: rows.length,
+  offset: '0',
+  total: rows.length,
+  data: rows,
+});
+
+/** The hierarchy reads answer with a bare `{status, data}` and no paging. */
+const vlabData = (payload) => ({ status: 'success', data: payload });
+
+const VLAB_LISTS = {
+  bsps: 'VLAB_BSPS',
+  'connection-types': 'VLAB_CONNECTION_TYPES',
+  countries: 'VLAB_COUNTRIES',
+  cpus: 'VLAB_CPUS',
+  'info-architectures': 'VLAB_INFO_ARCHITECTURES',
+  kvm: 'VLAB_KVM',
+  labs: 'VLAB_LABS',
+  locations: 'VLAB_LOCATIONS',
+  'network-interfaces': 'VLAB_NETWORK_INTERFACES',
+  pdus: 'VLAB_PDUS',
+};
+
+for (const [segment, fixture] of Object.entries(VLAB_LISTS)) {
+  router.get(`${TM}/${segment}`, (req, res) => res.json(vlabList(data[fixture])));
+}
+
+/**
+ * Reports whether the caller has any lab resource assigned. The captured
+ * response is a refusal — `check: false` with the "contact your administrator"
+ * message — which is what an account with no assignment sees.
+ */
+router.get(`${TM}/checkrbac`, (req, res) => {
+  res.json(vlabData(data.VLAB_CHECKRBAC));
+});
+
+router.get(`${TM}/labs-locations`, (req, res) => {
+  res.json(vlabData(data.VLAB_LABS_LOCATIONS));
+});
+
+/**
+ * Despite the name, the path parameter is a STATE id and the response is the
+ * cities under it — the platform's naming, kept as observed. An id that is not
+ * a UUID is rejected before it can be looked up.
+ */
+router.get(`${TM}/cities/:cityId`, (req, res) => {
+  if (!UUID.test(req.params.cityId)) {
+    return fail(res, 400, 'cityId must be a valid UUID');
+  }
+  return res.json(vlabData(data.VLAB_CITIES));
+});
+
+/** Locations within a city. Here the parameter really is a city id. */
+router.get(`${TM}/locations-city/:locationsCityId`, (req, res) => {
+  if (!UUID.test(req.params.locationsCityId)) {
+    return fail(res, 400, 'locationsCityId must be a valid UUID');
+  }
+  return res.json(vlabData(data.VLAB_LOCATIONS_BY_CITY));
+});
 
 /* ------------------------------------------------------------------ *
  * Fallback

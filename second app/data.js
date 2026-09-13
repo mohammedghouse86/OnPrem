@@ -1018,6 +1018,178 @@ const TAF_TEST_PLANS = [
  */
 const TAF_EXECUTIONS = [];
 
+/* ------------------------------------------------------------------ *
+ * Virtual Lab — target manager
+ *
+ * Admin-only, all of it. These are the reference tables behind the lab
+ * inventory (hardware, network kit and the country/state/city/site/lab
+ * hierarchy), and an ordinary account has no business reading them — so every
+ * path under /vlab/api/v4/target-manager is refused for a non-admin role. See
+ * ADMIN_ONLY_PREFIXES in auth.js.
+ *
+ * Bodies are the captured ones. The list endpoints return a count/offset/total
+ * envelope in which `offset` is a STRING, while the three hierarchy reads
+ * return a bare `{status, data}` — both quirks are the service's, and both are
+ * reproduced.
+ * ------------------------------------------------------------------ */
+
+const VLAB_BSPS = [
+  {
+    id: '1364ee63-f7ca-4d79-968f-de999633823a',
+    name: 'test_bsp',
+    createdDate: '2026-09-10T16:13:24.825Z',
+    modifiedDate: '2026-09-10T16:13:31.103Z',
+    createdBy: 'testadmin01',
+    modifiedBy: 'testadmin01'
+  }
+];
+
+const VLAB_CHECKRBAC = {
+  message: "You don't have any assigned resource. Please contact your administrator.",
+  check: false
+};
+
+const VLAB_CITIES = [
+  {
+    id: '3d509f2d-086c-45b6-bc46-ee9af468ea41',
+    name: 'test city',
+    createdDate: '2026-09-10T16:15:44.476Z',
+    modifiedDate: '2026-09-10T16:15:44.476Z',
+    createdBy: 'testadmin01',
+    modifiedBy: null,
+    isDeleted: false
+  }
+];
+
+const VLAB_CONNECTION_TYPES = [];
+
+const VLAB_COUNTRIES = [
+  {
+    id: 'f2b5fef5-ef9c-4af5-8513-bff02f0a34fa',
+    name: 'test country',
+    modifiedDate: null,
+    modifiedBy: null,
+    isDeleted: false
+  }
+];
+
+const VLAB_CPUS = [];
+
+const VLAB_INFO_ARCHITECTURES = [
+  {
+    id: '086b5184-e8f7-4999-b85f-d064524983f2',
+    name: 'test_10_sep',
+    createdDate: '2026-09-10T16:12:53.017Z',
+    modifiedDate: '2026-09-10T16:12:53.017Z',
+    createdBy: 'testadmin01',
+    modifiedBy: 'testadmin01'
+  }
+];
+
+const VLAB_KVM = [
+  {
+    id: '7ba01433-94a8-41c9-827b-9e12b6be3bd0',
+    name: 'test kvm',
+    url: null,
+    vncIpAddress: '12.12.12.12',
+    ldapEnabled: false,
+    username: 'username',
+    password: '[REDACTED]',
+    createdDate: '2026-09-10T16:17:28.736Z',
+    modifiedDate: '2026-09-10T16:17:35.388Z',
+    createdBy: 'testadmin01',
+    modifiedBy: 'testadmin01'
+  }
+];
+
+const VLAB_LABS = [
+  {
+    name: 'test lab',
+    id: 'bbedb09e-0bec-4c44-a310-658b21a22120',
+    locationName: 'test site',
+    locationId: 'e3bde3d9-c055-4e01-ac08-f69c7110a682',
+    cityName: 'test city',
+    cityId: '3d509f2d-086c-45b6-bc46-ee9af468ea41',
+    stateName: 'test state',
+    stateId: '71790855-cdc0-42b1-807d-c742a3cf651b',
+    countryName: 'test country',
+    countryId: 'f2b5fef5-ef9c-4af5-8513-bff02f0a34fa'
+  }
+];
+
+const VLAB_LABS_LOCATIONS = [
+  {
+    location_name: 'test site',
+    city_name: 'test city',
+    id: 'bbedb09e-0bec-4c44-a310-658b21a22120',
+    name: 'test lab'
+  }
+];
+
+const VLAB_LOCATIONS = [
+  {
+    id: 'e3bde3d9-c055-4e01-ac08-f69c7110a682',
+    name: 'test site',
+    address: null,
+    description: null,
+    createdDate: '2026-09-10T16:16:12.399Z',
+    modifiedDate: '2026-09-10T16:16:12.399Z',
+    createdBy: 'testadmin01',
+    modifiedBy: null,
+    city: {
+      id: '3d509f2d-086c-45b6-bc46-ee9af468ea41',
+      name: 'test city',
+      createdDate: '2026-09-10T16:15:44.476Z',
+      modifiedDate: '2026-09-10T16:15:44.476Z',
+      createdBy: 'testadmin01',
+      modifiedBy: null,
+      isDeleted: false,
+      state: {
+        id: '71790855-cdc0-42b1-807d-c742a3cf651b',
+        name: 'test state',
+        createdDate: '2026-09-10T16:15:25.360Z',
+        modifiedDate: '2026-09-10T16:15:25.360Z',
+        createdBy: 'testadmin01',
+        modifiedBy: null,
+        isDeleted: false,
+        country: {
+          id: 'f2b5fef5-ef9c-4af5-8513-bff02f0a34fa',
+          name: 'test country',
+          createdDate: '2026-09-10T16:14:59.435Z',
+          modifiedDate: '2026-09-10T16:14:59.435Z',
+          createdBy: 'testadmin01',
+          modifiedBy: null,
+          isDeleted: false
+        }
+      }
+    }
+  }
+];
+
+const VLAB_LOCATIONS_BY_CITY = [
+  {
+    id: 'e3bde3d9-c055-4e01-ac08-f69c7110a682',
+    name: 'test site',
+    address: null,
+    description: null,
+    modifiedDate: null,
+    modifiedBy: null
+  }
+];
+
+const VLAB_NETWORK_INTERFACES = [
+  {
+    id: 'e91609c8-ec43-4796-b8d3-79750fef59f8',
+    name: 'test',
+    createdDate: '2026-09-10T16:17:56.504Z',
+    modifiedDate: '2026-09-10T16:18:01.770Z',
+    createdBy: 'testadmin01',
+    modifiedBy: 'testadmin01'
+  }
+];
+
+const VLAB_PDUS = [];
+
 module.exports = {
   ORGS,
   GROUPS,
@@ -1035,6 +1207,20 @@ module.exports = {
   TAF_PROJECTS,
   TAF_TEST_PLANS,
   TAF_EXECUTIONS,
+  VLAB_BSPS,
+  VLAB_CHECKRBAC,
+  VLAB_CITIES,
+  VLAB_CONNECTION_TYPES,
+  VLAB_COUNTRIES,
+  VLAB_CPUS,
+  VLAB_INFO_ARCHITECTURES,
+  VLAB_KVM,
+  VLAB_LABS,
+  VLAB_LABS_LOCATIONS,
+  VLAB_LOCATIONS,
+  VLAB_LOCATIONS_BY_CITY,
+  VLAB_NETWORK_INTERFACES,
+  VLAB_PDUS,
   ENVIRONMENT_WRRN,
   LOCATION_WRRN,
   PORTAL_WRRN,

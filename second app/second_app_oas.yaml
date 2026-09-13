@@ -16,7 +16,17 @@ servers:
     description: |
       Mock implementation of this surface. It shares a host and a base path with a
       second, unrelated mock (`onpremtest.yaml`), which answers on entirely different
-      paths and with entirely different credentials — see **Deployment** above.
+      paths and with entirely different credentials, so a test run driven by one spec
+      never reaches the other's surface.
+
+      Three headers carry every request, and they are the only three needed:
+
+          accept:        application/json, text/plain, */*
+          authorization: Bearer <token>
+          cookie:        authCookiePart0=<token>; languageCookie=en-US
+
+      The tokens are static: they never rotate and never expire, and either the header
+      or the cookie authenticates on its own.
 
 tags:
   - name: Authentication
@@ -37,6 +47,11 @@ tags:
     description: Test Automation Framework test plans and plugins (v4).
   - name: TAF Executions
     description: Test run executions.
+  - name: Virtual Lab
+    description: |
+      Lab target manager — hardware inventory and the country/state/city/site/lab
+      hierarchy. Admin-only: every path under it is refused for a non-admin role
+      with 403, before the handler runs.
 
 # `Authorization: Bearer <jwt>` is the credential every operation requires.
 # Browser traffic additionally carries the chunked `authCookiePart*` cookie holding the
@@ -805,6 +820,396 @@ paths:
         '400':
           $ref: '#/components/responses/TafValidationError'
 
+  # ------------------------------------------------------- VLAB: target mgr --
+  # Every path below is admin-only. A non-admin account is refused with 403
+  # before the handler runs, so the whole subtree is Closed to the user role and
+  # Open to the admin role. The 403 is declared once as `AdminOnly` and
+  # referenced by each operation.
+
+  /vlab/api/v4/target-manager/bsps:
+    get:
+      tags: [Virtual Lab]
+      summary: List board support packages
+      operationId: listVlabBsps
+      responses:
+        '200':
+          description: Paged BSP list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabNamedResource'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/checkrbac:
+    get:
+      tags: [Virtual Lab]
+      summary: Check the caller's lab resource assignment
+      operationId: checkVlabRbac
+      description: |
+        Reports whether the caller has any lab resource assigned. The observed response
+        is a refusal — `check: false` with a "contact your administrator" message — which
+        is what an account with no assignment sees. Note this is the service reporting on
+        assignment; it is not the gateway's authorization decision, which arrives as a
+        `403` and never reaches this body.
+      responses:
+        '200':
+          description: Assignment check result.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VlabRbacCheck'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/cities/{cityId}:
+    parameters:
+      - name: cityId
+        in: path
+        required: true
+        description: |
+          Despite the name, the observed call passes a **state** id here and the response
+          is the list of cities under that state. The naming is the platform's and is
+          kept as observed.
+        schema:
+          type: string
+          format: uuid
+        example: 71790855-cdc0-42b1-807d-c742a3cf651b
+    get:
+      tags: [Virtual Lab]
+      summary: List the cities of a state
+      operationId: listVlabCities
+      responses:
+        '200':
+          description: Cities under the given state.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabCity'
+        '400':
+          description: The id is not a UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/connection-types:
+    get:
+      tags: [Virtual Lab]
+      summary: List connection types
+      operationId: listVlabConnectionTypes
+      responses:
+        '200':
+          description: Paged connection-type list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabNamedResource'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/countries:
+    get:
+      tags: [Virtual Lab]
+      summary: List countries
+      operationId: listVlabCountries
+      responses:
+        '200':
+          description: Paged country list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabCountry'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/cpus:
+    get:
+      tags: [Virtual Lab]
+      summary: List CPUs
+      operationId: listVlabCpus
+      responses:
+        '200':
+          description: Paged CPU list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabNamedResource'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/info-architectures:
+    get:
+      tags: [Virtual Lab]
+      summary: List target architectures
+      operationId: listVlabInfoArchitectures
+      responses:
+        '200':
+          description: Paged architecture list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabNamedResource'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/kvm:
+    get:
+      tags: [Virtual Lab]
+      summary: List KVM switches
+      operationId: listVlabKvm
+      responses:
+        '200':
+          description: |
+            Paged KVM list. The `password` field came back as the literal string
+            `[REDACTED]` in the capture, so no credential is carried here.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabKvm'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/labs:
+    get:
+      tags: [Virtual Lab]
+      summary: List labs
+      operationId: listVlabLabs
+      description: |
+        Each row flattens the whole site hierarchy — lab, location, city, state and
+        country — into sibling `*Name` / `*Id` pairs rather than nesting it, which is how
+        `/locations` returns the same relationships.
+      responses:
+        '200':
+          description: Paged lab list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabLab'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/labs-locations:
+    get:
+      tags: [Virtual Lab]
+      summary: List labs with their location and city
+      operationId: listVlabLabsLocations
+      description: |
+        A trimmed pairing of lab to site. Note the snake_case `location_name` and
+        `city_name` keys — every other field in this API is camelCase.
+      responses:
+        '200':
+          description: Lab/location pairs.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabLabLocation'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/locations:
+    get:
+      tags: [Virtual Lab]
+      summary: List locations
+      operationId: listVlabLocations
+      responses:
+        '200':
+          description: Paged location list, each with its city, state and country nested.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabLocation'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/locations-city/{locationsCityId}:
+    parameters:
+      - name: locationsCityId
+        in: path
+        required: true
+        description: City id. Here the parameter really is a city, unlike `/cities/{cityId}`.
+        schema:
+          type: string
+          format: uuid
+        example: 3d509f2d-086c-45b6-bc46-ee9af468ea41
+    get:
+      tags: [Virtual Lab]
+      summary: List the locations of a city
+      operationId: listVlabLocationsByCity
+      responses:
+        '200':
+          description: |
+            Locations in the given city. A trimmed shape — no `createdDate` or
+            `createdBy`, and no nested city — unlike `/locations`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabDataEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabLocationSummary'
+        '400':
+          description: The id is not a UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/network-interfaces:
+    get:
+      tags: [Virtual Lab]
+      summary: List network interfaces
+      operationId: listVlabNetworkInterfaces
+      responses:
+        '200':
+          description: Paged network-interface list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabNamedResource'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
+  /vlab/api/v4/target-manager/pdus:
+    get:
+      tags: [Virtual Lab]
+      summary: List power distribution units
+      operationId: listVlabPdus
+      responses:
+        '200':
+          description: Paged PDU list. Empty in the capture.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/VlabListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VlabNamedResource'
+        '401':
+          $ref: '#/components/responses/UmError'
+        '403':
+          $ref: '#/components/responses/AdminOnly'
+
 ################################################################################
 # COMPONENTS
 ################################################################################
@@ -930,6 +1335,20 @@ components:
         Not Modified. Returned when the client sends `If-None-Match` matching the
         current `ETag`; 54 of the 96 captured API requests were conditional.
 
+    AdminOnly:
+      description: |
+        Forbidden. The path is reserved to the admin role and the caller holds a
+        non-admin one. Applied before the handler runs, so no payload leaks.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UmEnvelope'
+          example:
+            success: false
+            data: null
+            correlationId: null
+            message: "Role 'user' is not permitted to access /vlab/api/v4/target-manager/bsps."
+
     UmError:
       description: Error envelope from the User Management service.
       content:
@@ -952,6 +1371,149 @@ components:
                   field: params.projectId
 
   schemas:
+
+    # ------------------------------------------------------------- vlab --
+    VlabListEnvelope:
+      type: object
+      description: |
+        Envelope used by the Virtual Lab list endpoints — a fourth shape, distinct from
+        `UmEnvelope`, `TafV3Envelope` and TAF v4's bare `{data}`. Note `offset` is a
+        **string** while `count` and `total` are integers; that is what the service
+        returns.
+      properties:
+        status: { type: string, example: success }
+        count: { type: integer, example: 1 }
+        offset: { type: string, example: "0" }
+        total: { type: integer, example: 1 }
+        data:
+          type: array
+          items: {}
+
+    VlabDataEnvelope:
+      type: object
+      description: |
+        The unpaged Virtual Lab envelope, used by the hierarchy reads
+        (`/cities/{cityId}`, `/labs-locations`, `/locations-city/{locationsCityId}`)
+        and by `/checkrbac`.
+      properties:
+        status: { type: string, example: success }
+        data: {}
+
+    VlabRbacCheck:
+      type: object
+      properties:
+        message:
+          type: string
+          example: You don't have any assigned resource. Please contact your administrator.
+        check:
+          type: boolean
+          description: Whether the caller has any lab resource assigned.
+          example: false
+
+    VlabNamedResource:
+      type: object
+      description: |
+        The common shape behind BSPs, architectures, network interfaces, connection
+        types, CPUs and PDUs — an id, a name and audit fields, nothing else.
+      properties:
+        id: { type: string, format: uuid, example: 1364ee63-f7ca-4d79-968f-de999633823a }
+        name: { type: string, example: test_bsp }
+        createdDate: { type: string, format: date-time, example: "2026-09-10T16:13:24.825Z" }
+        modifiedDate: { type: string, format: date-time, nullable: true, example: "2026-09-10T16:13:31.103Z" }
+        createdBy: { type: string, example: testadmin01 }
+        modifiedBy: { type: string, nullable: true, example: testadmin01 }
+
+    VlabKvm:
+      allOf:
+        - $ref: '#/components/schemas/VlabNamedResource'
+        - type: object
+          properties:
+            url: { type: string, nullable: true }
+            vncIpAddress: { type: string, example: 12.12.12.12 }
+            ldapEnabled: { type: boolean, example: false }
+            username: { type: string, example: username }
+            password:
+              type: string
+              description: |
+                Returned as the literal string `[REDACTED]` in the capture. No real
+                credential was ever on the wire, and none is in this file.
+              example: "[REDACTED]"
+
+    VlabCountry:
+      type: object
+      properties:
+        id: { type: string, format: uuid, example: f2b5fef5-ef9c-4af5-8513-bff02f0a34fa }
+        name: { type: string, example: test country }
+        createdDate: { type: string, format: date-time, nullable: true }
+        modifiedDate: { type: string, format: date-time, nullable: true }
+        createdBy: { type: string, nullable: true }
+        modifiedBy: { type: string, nullable: true }
+        isDeleted: { type: boolean, example: false }
+
+    VlabState:
+      allOf:
+        - $ref: '#/components/schemas/VlabCountry'
+        - type: object
+          properties:
+            country:
+              $ref: '#/components/schemas/VlabCountry'
+
+    VlabCity:
+      allOf:
+        - $ref: '#/components/schemas/VlabCountry'
+        - type: object
+          properties:
+            state:
+              $ref: '#/components/schemas/VlabState'
+
+    VlabLocationSummary:
+      type: object
+      description: The trimmed location shape returned by `/locations-city/{id}`.
+      properties:
+        id: { type: string, format: uuid, example: e3bde3d9-c055-4e01-ac08-f69c7110a682 }
+        name: { type: string, example: test site }
+        address: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        modifiedDate: { type: string, format: date-time, nullable: true }
+        modifiedBy: { type: string, nullable: true }
+
+    VlabLocation:
+      allOf:
+        - $ref: '#/components/schemas/VlabLocationSummary'
+        - type: object
+          properties:
+            createdDate: { type: string, format: date-time, example: "2026-09-10T16:16:12.399Z" }
+            createdBy: { type: string, example: testadmin01 }
+            city:
+              $ref: '#/components/schemas/VlabCity'
+
+    VlabLab:
+      type: object
+      description: |
+        A lab with its whole site hierarchy flattened into `*Name` / `*Id` pairs rather
+        than nested objects.
+      properties:
+        id: { type: string, format: uuid, example: bbedb09e-0bec-4c44-a310-658b21a22120 }
+        name: { type: string, example: test lab }
+        locationName: { type: string, example: test site }
+        locationId: { type: string, format: uuid, example: e3bde3d9-c055-4e01-ac08-f69c7110a682 }
+        cityName: { type: string, example: test city }
+        cityId: { type: string, format: uuid, example: 3d509f2d-086c-45b6-bc46-ee9af468ea41 }
+        stateName: { type: string, example: test state }
+        stateId: { type: string, format: uuid, example: 71790855-cdc0-42b1-807d-c742a3cf651b }
+        countryName: { type: string, example: test country }
+        countryId: { type: string, format: uuid, example: f2b5fef5-ef9c-4af5-8513-bff02f0a34fa }
+
+    VlabLabLocation:
+      type: object
+      description: |
+        Lab paired with its site. The `location_name` and `city_name` keys are
+        snake_case here and camelCase everywhere else in the API.
+      properties:
+        location_name: { type: string, example: test site }
+        city_name: { type: string, example: test city }
+        id: { type: string, format: uuid, example: bbedb09e-0bec-4c44-a310-658b21a22120 }
+        name: { type: string, example: test lab }
 
     # -------------------------------------------------------------- envelopes --
     UmEnvelope:
