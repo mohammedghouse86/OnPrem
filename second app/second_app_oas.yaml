@@ -47,6 +47,16 @@ tags:
     description: Test Automation Framework test plans and plugins (v4).
   - name: TAF Executions
     description: Test run executions.
+  - name: Grafana
+    description: |
+      Bundled Grafana instance. Third-party product with its own published API;
+      only the slice the capture exercised is documented here.
+  - name: Kiali
+    description: Bundled Kiali / Istio service-mesh console.
+  - name: Prometheus
+    description: Bundled Prometheus metrics and rules API.
+  - name: Tracing
+    description: Bundled Jaeger tracing API.
   - name: Virtual Lab
     description: |
       Lab target manager — hardware inventory and the country/state/city/site/lab
@@ -2285,6 +2295,1055 @@ paths:
           $ref: '#/components/responses/UmError'
         '403':
           $ref: '#/components/responses/AdminOnly'
+
+  # ------------------------------------------------- THIRD-PARTY --
+  # Grafana, Kiali/Istio, Prometheus and Jaeger, bundled with the platform and
+  # reachable on the same host with the same token. Response schemas are left
+  # loose: these are third-party products with their own published contracts,
+  # and the capture exercised only a slice of each.
+
+  /grafana/api/dashboard/snapshots:
+    get:
+      tags: [Grafana]
+      summary: Snapshots
+      operationId: grafanaDashboardSnapshots
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/dashboards/home:
+    get:
+      tags: [Grafana]
+      summary: Home
+      operationId: grafanaDashboardsHome
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/dashboards/public-dashboards:
+    get:
+      tags: [Grafana]
+      summary: Public dashboards
+      operationId: grafanaDashboardsPublicDashboards
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/dashboards/tags:
+    get:
+      tags: [Grafana]
+      summary: Tags
+      operationId: grafanaDashboardsTags
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources:
+    get:
+      tags: [Grafana]
+      summary: Datasources
+      operationId: grafanaDatasources
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources/correlations:
+    get:
+      tags: [Grafana]
+      summary: Correlations
+      operationId: grafanaDatasourcesCorrelations
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources/uid/{uid}/resources/api/v1/label/__name__/values:
+    parameters:
+      - name: uid
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Values
+      operationId: grafanaDatasourcesUidByResourcesApiV1LabelNameValues
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources/uid/{uid}/resources/api/v1/labels:
+    parameters:
+      - name: uid
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Labels
+      operationId: grafanaDatasourcesUidByResourcesApiV1Labels
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources/uid/{uid}/resources/api/v1/metadata:
+    parameters:
+      - name: uid
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Metadata
+      operationId: grafanaDatasourcesUidByResourcesApiV1Metadata
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources/uid/{uid}/resources/api/v1/query_exemplars:
+    parameters:
+      - name: uid
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Query exemplars
+      operationId: grafanaDatasourcesUidByResourcesApiV1QueryExemplars
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/datasources/uid/{uid}/resources/api/v1/rules:
+    parameters:
+      - name: uid
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Rules
+      operationId: grafanaDatasourcesUidByResourcesApiV1Rules
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/folders:
+    get:
+      tags: [Grafana]
+      summary: Folders
+      operationId: grafanaFolders
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/folders/general:
+    get:
+      tags: [Grafana]
+      summary: General
+      operationId: grafanaFoldersGeneral
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/frontend-metrics:
+    post:
+      tags: [Grafana]
+      summary: Frontend metrics
+      operationId: grafanaFrontendMetrics
+      responses:
+        '200':
+          description: As captured.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/gnet/plugins:
+    get:
+      tags: [Grafana]
+      summary: Plugins
+      operationId: grafanaGnetPlugins
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/gnet/plugins/{pluginId}/versions/{version}/logos/small:
+    parameters:
+      - name: pluginId
+        in: path
+        required: true
+        schema: { type: string }
+      - name: version
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Small
+      operationId: grafanaGnetPluginsByVersionsByLogosSmall
+      responses:
+        '200':
+          description: As captured.
+          content:
+            image/svg+xml:
+                schema: { type: string }
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/library-elements:
+    get:
+      tags: [Grafana]
+      summary: Library elements
+      operationId: grafanaLibraryElements
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/plugins:
+    get:
+      tags: [Grafana]
+      summary: Plugins
+      operationId: grafanaPlugins
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/plugins/{pluginId}/settings:
+    parameters:
+      - name: pluginId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Grafana]
+      summary: Settings
+      operationId: grafanaPluginsBySettings
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/plugins/errors:
+    get:
+      tags: [Grafana]
+      summary: Errors
+      operationId: grafanaPluginsErrors
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/prometheus/grafana/api/v1/rules:
+    get:
+      tags: [Grafana]
+      summary: Rules
+      operationId: grafanaPrometheusGrafanaApiV1Rules
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/search:
+    get:
+      tags: [Grafana]
+      summary: Search
+      operationId: grafanaSearch
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/search/sorting:
+    get:
+      tags: [Grafana]
+      summary: Sorting
+      operationId: grafanaSearchSorting
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/user/orgs:
+    get:
+      tags: [Grafana]
+      summary: Orgs
+      operationId: grafanaUserOrgs
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /grafana/api/user/preferences:
+    get:
+      tags: [Grafana]
+      summary: Preferences
+      operationId: grafanaUserPreferences
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/auth/info:
+    get:
+      tags: [Kiali]
+      summary: Info
+      operationId: kialiAuthInfo
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/clusters/apps:
+    get:
+      tags: [Kiali]
+      summary: Apps
+      operationId: kialiClustersApps
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/clusters/health:
+    get:
+      tags: [Kiali]
+      summary: Health
+      operationId: kialiClustersHealth
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/clusters/services:
+    get:
+      tags: [Kiali]
+      summary: Services
+      operationId: kialiClustersServices
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/clusters/tls:
+    get:
+      tags: [Kiali]
+      summary: Tls
+      operationId: kialiClustersTls
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/clusters/workloads:
+    get:
+      tags: [Kiali]
+      summary: Workloads
+      operationId: kialiClustersWorkloads
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/config:
+    get:
+      tags: [Kiali]
+      summary: Config
+      operationId: kialiConfig
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/crippled:
+    get:
+      tags: [Kiali]
+      summary: Crippled
+      operationId: kialiCrippled
+      responses:
+        '200':
+          description: As captured.
+          content:
+            text/plain:
+                schema: { type: string }
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/grafana:
+    get:
+      tags: [Kiali]
+      summary: Grafana
+      operationId: kialiGrafana
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/istio/config:
+    get:
+      tags: [Kiali]
+      summary: Config
+      operationId: kialiIstioConfig
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/istio/status:
+    get:
+      tags: [Kiali]
+      summary: Status
+      operationId: kialiIstioStatus
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/istio/validations:
+    get:
+      tags: [Kiali]
+      summary: Validations
+      operationId: kialiIstioValidations
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/mesh/controlplanes:
+    get:
+      tags: [Kiali]
+      summary: Controlplanes
+      operationId: kialiMeshControlplanes
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/mesh/graph:
+    get:
+      tags: [Kiali]
+      summary: Graph
+      operationId: kialiMeshGraph
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/namespaces:
+    get:
+      tags: [Kiali]
+      summary: Namespaces
+      operationId: kialiNamespaces
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/status:
+    get:
+      tags: [Kiali]
+      summary: Status
+      operationId: kialiStatus
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /kiali/api/tracing:
+    get:
+      tags: [Kiali]
+      summary: Tracing
+      operationId: kialiTracing
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/alertmanagers:
+    get:
+      tags: [Prometheus]
+      summary: Alertmanagers
+      operationId: prometheusV1Alertmanagers
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/label/__name__/values:
+    get:
+      tags: [Prometheus]
+      summary: Values
+      operationId: prometheusV1LabelNameValues
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/query:
+    get:
+      tags: [Prometheus]
+      summary: Query
+      operationId: prometheusV1Query
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/rules:
+    get:
+      tags: [Prometheus]
+      summary: Rules
+      operationId: prometheusV1Rules
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/scrape_pools:
+    get:
+      tags: [Prometheus]
+      summary: Scrape pools
+      operationId: prometheusV1ScrapePools
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/status/buildinfo:
+    get:
+      tags: [Prometheus]
+      summary: Buildinfo
+      operationId: prometheusV1StatusBuildinfo
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/status/config:
+    get:
+      tags: [Prometheus]
+      summary: Config
+      operationId: prometheusV1StatusConfig
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/status/flags:
+    get:
+      tags: [Prometheus]
+      summary: Flags
+      operationId: prometheusV1StatusFlags
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/status/runtimeinfo:
+    get:
+      tags: [Prometheus]
+      summary: Runtimeinfo
+      operationId: prometheusV1StatusRuntimeinfo
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/status/tsdb:
+    get:
+      tags: [Prometheus]
+      summary: Tsdb
+      operationId: prometheusV1StatusTsdb
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /prometheus/api/v1/targets:
+    get:
+      tags: [Prometheus]
+      summary: Targets
+      operationId: prometheusV1Targets
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/dependencies:
+    get:
+      tags: [Tracing]
+      summary: Dependencies
+      operationId: tracingDependencies
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/metrics/calls:
+    get:
+      tags: [Tracing]
+      summary: Calls
+      operationId: tracingMetricsCalls
+      responses:
+        '501':
+          description: As captured.
+          content:
+            text/plain:
+                schema: { type: string }
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/metrics/errors:
+    get:
+      tags: [Tracing]
+      summary: Errors
+      operationId: tracingMetricsErrors
+      responses:
+        '501':
+          description: As captured.
+          content:
+            text/plain:
+                schema: { type: string }
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/metrics/latencies:
+    get:
+      tags: [Tracing]
+      summary: Latencies
+      operationId: tracingMetricsLatencies
+      responses:
+        '501':
+          description: As captured.
+          content:
+            text/plain:
+                schema: { type: string }
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/services:
+    get:
+      tags: [Tracing]
+      summary: Services
+      operationId: tracingServices
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/services/{service}/operations:
+    parameters:
+      - name: service
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Tracing]
+      summary: Operations
+      operationId: tracingServicesByOperations
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /tracing/api/traces:
+    get:
+      tags: [Tracing]
+      summary: Traces
+      operationId: tracingTraces
+      responses:
+        '200':
+          description: As captured.
+          content:
+            application/json:
+                schema:
+                  description: |
+                    Third-party payload, passed through as captured (trimmed). Not modelled
+                    field by field — see the product's own API documentation.
+        '401':
+          $ref: '#/components/responses/UmError'
 
 ################################################################################
 # COMPONENTS

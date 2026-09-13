@@ -3,15 +3,18 @@
 /**
  * Wind River Studio mock — the second app.
  *
- * Serves every path item in `second_app_oas.yaml` (20 paths / 22 operations)
- * across the three prefixes the real Kong gateway fronts: `/um/api`,
- * `/portal/api` and `/taf/api`. Nothing was renamed, added to, or dropped from
- * that contract.
+ * Serves every path item in `second_app_oas.yaml` — every API call present in
+ * the HAR captures, across the eight gateway prefixes the real Kong instance
+ * fronts. Four are the platform's own services (`/um/api`, `/portal/api`,
+ * `/taf/api`, `/vlab/api`); four are third-party products bundled with it
+ * (`/grafana/api`, `/kiali/api`, `/prometheus/api`, `/tracing/api`), which
+ * answer on the same host and accept the same bearer token. Nothing was
+ * renamed, added to, or dropped from that contract.
  *
  * This is an Express Router, mounted by ../server.js ahead of the on-prem app's
- * own middleware so the two surfaces never share an authentication step. The
- * three prefixes above do not collide with any path in `onpremtest.yaml`, so
- * both apps can answer on one host and one base path while staying isolated.
+ * own middleware so the two surfaces never share an authentication step. None
+ * of the prefixes above collides with any path in `onpremtest.yaml`, so both
+ * apps can answer on one host and one base path while staying isolated.
  */
 
 const express = require('express');
@@ -26,7 +29,17 @@ const router = express.Router();
  * handed straight back to the on-prem app mounted behind this router, so the
  * two surfaces never see each other's traffic — or each other's credentials.
  */
-const PREFIXES = ['/um/api', '/portal/api', '/taf/api', '/vlab/api'];
+const PREFIXES = [
+  '/um/api',
+  '/portal/api',
+  '/taf/api',
+  '/vlab/api',
+  // Third-party services bundled behind the same gateway.
+  '/grafana/api',
+  '/kiali/api',
+  '/prometheus/api',
+  '/tracing/api',
+];
 
 router.use((req, res, next) => {
   const mine = PREFIXES.some((p) => req.path === p || req.path.startsWith(p + '/'));
@@ -814,6 +827,157 @@ router.post('/vlab/api/v4/virtual-target-manager/virtual-targets/search', (req, 
     data: data.VLAB_VIRTUAL_TARGETS,
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * Third-party services behind the same gateway
+ *
+ * Grafana, Kiali/Istio, Prometheus and Jaeger ship with the platform and answer
+ * on the same host with the same bearer token. They are open to both roles:
+ * they are observability tools an ordinary account uses, and nothing in the
+ * capture suggests the gateway treats them as admin-only.
+ *
+ * Payloads are the captured ones, trimmed — see data-thirdparty.js.
+ * ------------------------------------------------------------------ */
+
+const third = require('./data-thirdparty');
+
+/* ---- Grafana (25) ------------------------------------------- */
+
+router.get('/grafana/api/dashboard/snapshots', (req, res) => res.json(third.GRAFANA_DASHBOARD_SNAPSHOTS));
+
+router.get('/grafana/api/dashboards/home', (req, res) => res.json(third.GRAFANA_DASHBOARDS_HOME));
+
+router.get('/grafana/api/dashboards/public-dashboards', (req, res) => res.json(third.GRAFANA_DASHBOARDS_PUBLIC_DASHBOARDS));
+
+router.get('/grafana/api/dashboards/tags', (req, res) => res.json(third.GRAFANA_DASHBOARDS_TAGS));
+
+router.get('/grafana/api/datasources', (req, res) => res.json(third.GRAFANA_DATASOURCES));
+
+router.get('/grafana/api/datasources/correlations', (req, res) => res.json(third.GRAFANA_DATASOURCES_CORRELATIONS));
+
+router.get('/grafana/api/datasources/uid/:uid/resources/api/v1/label/__name__/values', (req, res) => res.json(third.GRAFANA_DATASOURCES_UID_BY_RESOURCES_API_V1_LABEL_NAME_VALUES));
+
+router.get('/grafana/api/datasources/uid/:uid/resources/api/v1/labels', (req, res) => res.json(third.GRAFANA_DATASOURCES_UID_BY_RESOURCES_API_V1_LABELS));
+
+router.get('/grafana/api/datasources/uid/:uid/resources/api/v1/metadata', (req, res) => res.json(third.GRAFANA_DATASOURCES_UID_BY_RESOURCES_API_V1_METADATA));
+
+router.get('/grafana/api/datasources/uid/:uid/resources/api/v1/query_exemplars', (req, res) => res.json(third.GRAFANA_DATASOURCES_UID_BY_RESOURCES_API_V1_QUERY_EXEMPLARS));
+
+router.get('/grafana/api/datasources/uid/:uid/resources/api/v1/rules', (req, res) => res.json(third.GRAFANA_DATASOURCES_UID_BY_RESOURCES_API_V1_RULES));
+
+router.get('/grafana/api/folders', (req, res) => res.json(third.GRAFANA_FOLDERS));
+
+router.get('/grafana/api/folders/general', (req, res) => res.json(third.GRAFANA_FOLDERS_GENERAL));
+
+router.post('/grafana/api/frontend-metrics', (req, res) => res.status(200).end());
+
+router.get('/grafana/api/gnet/plugins', (req, res) => res.json(third.GRAFANA_GNET_PLUGINS));
+
+router.get('/grafana/api/gnet/plugins/:pluginId/versions/:version/logos/small', (req, res) => {
+  res.type('image/svg+xml').send(third.GRAFANA_PLUGIN_LOGO);
+});
+
+router.get('/grafana/api/library-elements', (req, res) => res.json(third.GRAFANA_LIBRARY_ELEMENTS));
+
+router.get('/grafana/api/plugins', (req, res) => res.json(third.GRAFANA_PLUGINS));
+
+router.get('/grafana/api/plugins/:pluginId/settings', (req, res) => res.json(third.GRAFANA_PLUGINS_BY_SETTINGS));
+
+router.get('/grafana/api/plugins/errors', (req, res) => res.json(third.GRAFANA_PLUGINS_ERRORS));
+
+router.get('/grafana/api/prometheus/grafana/api/v1/rules', (req, res) => res.json(third.GRAFANA_PROMETHEUS_GRAFANA_API_V1_RULES));
+
+router.get('/grafana/api/search', (req, res) => res.json(third.GRAFANA_SEARCH));
+
+router.get('/grafana/api/search/sorting', (req, res) => res.json(third.GRAFANA_SEARCH_SORTING));
+
+router.get('/grafana/api/user/orgs', (req, res) => res.json(third.GRAFANA_USER_ORGS));
+
+router.get('/grafana/api/user/preferences', (req, res) => res.json(third.GRAFANA_USER_PREFERENCES));
+
+/* ---- Kiali / Istio (17) ------------------------------------------- */
+
+router.get('/kiali/api/auth/info', (req, res) => res.json(third.KIALI_AUTH_INFO));
+
+router.get('/kiali/api/clusters/apps', (req, res) => res.json(third.KIALI_CLUSTERS_APPS));
+
+router.get('/kiali/api/clusters/health', (req, res) => res.json(third.KIALI_CLUSTERS_HEALTH));
+
+router.get('/kiali/api/clusters/services', (req, res) => res.json(third.KIALI_CLUSTERS_SERVICES));
+
+router.get('/kiali/api/clusters/tls', (req, res) => res.json(third.KIALI_CLUSTERS_TLS));
+
+router.get('/kiali/api/clusters/workloads', (req, res) => res.json(third.KIALI_CLUSTERS_WORKLOADS));
+
+router.get('/kiali/api/config', (req, res) => res.json(third.KIALI_CONFIG));
+
+router.get('/kiali/api/crippled', (req, res) => {
+  res.status(200).type('text/plain').send(third.KIALI_CRIPPLED);
+});
+
+router.get('/kiali/api/grafana', (req, res) => res.json(third.KIALI_GRAFANA));
+
+router.get('/kiali/api/istio/config', (req, res) => res.json(third.KIALI_ISTIO_CONFIG));
+
+router.get('/kiali/api/istio/status', (req, res) => res.json(third.KIALI_ISTIO_STATUS));
+
+router.get('/kiali/api/istio/validations', (req, res) => res.json(third.KIALI_ISTIO_VALIDATIONS));
+
+router.get('/kiali/api/mesh/controlplanes', (req, res) => res.json(third.KIALI_MESH_CONTROLPLANES));
+
+router.get('/kiali/api/mesh/graph', (req, res) => res.json(third.KIALI_MESH_GRAPH));
+
+router.get('/kiali/api/namespaces', (req, res) => res.json(third.KIALI_NAMESPACES));
+
+router.get('/kiali/api/status', (req, res) => res.json(third.KIALI_STATUS));
+
+router.get('/kiali/api/tracing', (req, res) => res.json(third.KIALI_TRACING));
+
+/* ---- Prometheus (11) ------------------------------------------- */
+
+router.get('/prometheus/api/v1/alertmanagers', (req, res) => res.json(third.PROMETHEUS_V1_ALERTMANAGERS));
+
+router.get('/prometheus/api/v1/label/__name__/values', (req, res) => res.json(third.PROMETHEUS_V1_LABEL_NAME_VALUES));
+
+router.get('/prometheus/api/v1/query', (req, res) => res.json(third.PROMETHEUS_V1_QUERY));
+
+router.get('/prometheus/api/v1/rules', (req, res) => res.json(third.PROMETHEUS_V1_RULES));
+
+router.get('/prometheus/api/v1/scrape_pools', (req, res) => res.json(third.PROMETHEUS_V1_SCRAPE_POOLS));
+
+router.get('/prometheus/api/v1/status/buildinfo', (req, res) => res.json(third.PROMETHEUS_V1_STATUS_BUILDINFO));
+
+router.get('/prometheus/api/v1/status/config', (req, res) => res.json(third.PROMETHEUS_V1_STATUS_CONFIG));
+
+router.get('/prometheus/api/v1/status/flags', (req, res) => res.json(third.PROMETHEUS_V1_STATUS_FLAGS));
+
+router.get('/prometheus/api/v1/status/runtimeinfo', (req, res) => res.json(third.PROMETHEUS_V1_STATUS_RUNTIMEINFO));
+
+router.get('/prometheus/api/v1/status/tsdb', (req, res) => res.json(third.PROMETHEUS_V1_STATUS_TSDB));
+
+router.get('/prometheus/api/v1/targets', (req, res) => res.json(third.PROMETHEUS_V1_TARGETS));
+
+/* ---- Jaeger tracing (7) ------------------------------------------- */
+
+router.get('/tracing/api/dependencies', (req, res) => res.json(third.TRACING_DEPENDENCIES));
+
+router.get('/tracing/api/metrics/calls', (req, res) => {
+  res.status(501).type('text/plain').send(third.TRACING_METRICS_CALLS);
+});
+
+router.get('/tracing/api/metrics/errors', (req, res) => {
+  res.status(501).type('text/plain').send(third.TRACING_METRICS_ERRORS);
+});
+
+router.get('/tracing/api/metrics/latencies', (req, res) => {
+  res.status(501).type('text/plain').send(third.TRACING_METRICS_LATENCIES);
+});
+
+router.get('/tracing/api/services', (req, res) => res.json(third.TRACING_SERVICES));
+
+router.get('/tracing/api/services/:service/operations', (req, res) => res.json(third.TRACING_SERVICES_BY_OPERATIONS));
+
+router.get('/tracing/api/traces', (req, res) => res.json(third.TRACING_TRACES));
 
 /* ------------------------------------------------------------------ *
  * Fallback

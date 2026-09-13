@@ -177,16 +177,33 @@ curl -H "$ADMIN" -H "$AJAX" http://localhost:8443/api/fm/alarm_list             
 ## Second app — Wind River Studio
 
 A runnable mock of every endpoint in
-[second app/second_app_oas.yaml](second%20app/second_app_oas.yaml) — **62 paths, 68
+[second app/second_app_oas.yaml](second%20app/second_app_oas.yaml) — **122 paths, 128
 operations**, which is every API call present in the `dast.wrstudio.cloud` HAR captures.
 Same rule as above: nothing renamed, added, or dropped.
 
-| Service | Prefix | Paths | Ops |
-| ------- | ------ | ----- | --- |
-| User Management | `/um/api` | 11 | 12 |
-| Test Automation Framework | `/taf/api` | 10 | 11 |
-| Virtual Lab | `/vlab/api` | 40 | 44 |
-| Portal | `/portal/api` | 1 | 1 | The code lives beside the spec in
+| | Service | Prefix | Paths | Ops |
+| --- | ------- | ------ | ----- | --- |
+| first-party | User Management | `/um/api` | 11 | 12 |
+| first-party | Test Automation Framework | `/taf/api` | 10 | 11 |
+| first-party | Virtual Lab | `/vlab/api` | 40 | 44 |
+| first-party | Portal | `/portal/api` | 1 | 1 |
+| third-party | Grafana | `/grafana/api` | 25 | 25 |
+| third-party | Kiali / Istio | `/kiali/api` | 17 | 17 |
+| third-party | Prometheus | `/prometheus/api` | 11 | 11 |
+| third-party | Jaeger tracing | `/tracing/api` | 7 | 7 |
+| | **Total** | | **122** | **128** |
+
+By method: **103 GET, 18 POST, 7 PUT**. No DELETE or PATCH appears anywhere in the
+captures, so none is documented.
+
+The four third-party services ship with the platform rather than being its own API, but
+they answer on the same host and accept the same bearer token, so a scan driven by this
+spec reaches them. Their fixtures live in
+[second app/data-thirdparty.js](second%20app/data-thirdparty.js) and are **trimmed** —
+several captured responses were far too large to keep whole (Prometheus `/targets` alone
+was 11 MB). Arrays are cut to two elements, maps of more than twenty keys to five, long
+strings truncated. Envelope, key names and value types are exactly as captured; only the
+row counts differ. The code lives beside the spec in
 [second app/](second%20app/) — [auth.js](second%20app/auth.js) (bearer tokens),
 [data.js](second%20app/data.js) (fixtures taken from the captured responses) and
 [routes.js](second%20app/routes.js) (the router that [server.js](server.js) mounts).
@@ -269,10 +286,14 @@ The same three rules as the on-prem app, so both surfaces are probed the same wa
      leaks with the `403`.
 
    The rest of the Virtual Lab surface — reservations, target control and the
-   virtual-target catalogue, 29 operations — is open to both roles. Those are what an
-   ordinary account actually uses, and `/vlab/api/v4/target-control/user/groups` reports
-   on the caller's own membership; closing them would make the user account useless
-   rather than merely unprivileged.
+   virtual-target catalogue — is open to both roles. Those are what an ordinary account
+   actually uses, and `/vlab/api/v4/target-control/user/groups` reports on the caller's
+   own membership; closing them would make the user account useless rather than merely
+   unprivileged. The four third-party services are open to both roles for the same
+   reason: they are observability tools, and nothing in the capture suggests the gateway
+   treats them as admin-only. Say so and they can be closed too.
+
+   That leaves **39 admin-only operations and 89 open to both roles.**
 2. **Read-only role** — `viewer` gets `403` on every non-GET, whatever the path.
 3. **Org ownership** — the id-bearing TAF paths and `PUT /um/api/resources/{wrrn}`
    return `403` when the object belongs to another org and `404` when it does not
