@@ -9,6 +9,9 @@ npm-debug.log*
 *HAR*.json
 StarlingX*.json
 
+# Scratch request notes — hold live tokens pasted from a browser session.
+fetch request to update RBAC map.txt
+
 # Generated credentials reference — holds working session tokens and passwords.
 # Matches both apps: ACCOUNTS.txt at the root and second app/ACCOUNTS.txt.
 # Regenerate locally with `npm run accounts` and `npm run accounts:second-app`.
