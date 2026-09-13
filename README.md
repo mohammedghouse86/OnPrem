@@ -4,6 +4,23 @@ A runnable mock of every endpoint in [onpremtest.yaml](onpremtest.yaml). Paths, 
 methods and query/body parameters are exactly as the spec describes them — nothing
 was renamed, added to, or dropped from the contract.
 
+## Two apps, one service
+
+One deployment serves two unrelated mocks from the same host and the same base path.
+They are kept apart by path prefix and by credential, and each keeps its own spec file:
+
+| App | Spec | Paths | Credential |
+| --- | ---- | ----- | ---------- |
+| On-prem (this document) | [onpremtest.yaml](onpremtest.yaml), served at `/openapi.yaml` | everything except the prefixes opposite | session cookie + `X-CSRFToken` + `X-Requested-With` |
+| Studio ("second app") | [second app/second_app_oas.yaml](second%20app/second_app_oas.yaml), served at `/second-app-openapi.yaml` | `/um/api`, `/portal/api`, `/taf/api` | `Authorization: Bearer <token>` |
+
+No path in either spec begins with a prefix belonging to the other, so no request is
+ambiguous. Neither app recognises the other's credential: a Studio token on an on-prem
+path fails, and an on-prem session cookie on a Studio path fails. A test run driven by
+one spec therefore never touches the other's surface. The second app is documented
+under [Second app](#second-app--wind-river-studio) below; everything until then
+describes the on-prem app.
+
 ## Authentication
 
 Platform cookie/CSRF auth. **Three headers are mandatory on every endpoint** —
@@ -157,6 +174,159 @@ curl -H "$USER"  -H "$AJAX" -H 'X-CSRFToken: user-static-csrf-token'  http://loc
 curl -H "$ADMIN" -H "$AJAX" http://localhost:8443/api/fm/alarm_list                                              # 403, no X-CSRFToken
 ```
 
+## Second app — Wind River Studio
+
+A runnable mock of every endpoint in
+[second app/second_app_oas.yaml](second%20app/second_app_oas.yaml) — 20 paths, 22
+operations, reconstructed from the `dast.wrstudio.cloud` HAR captures. Same rule as
+above: nothing renamed, added, or dropped. The code lives beside the spec in
+[second app/](second%20app/) — [auth.js](second%20app/auth.js) (bearer tokens),
+[data.js](second%20app/data.js) (fixtures taken from the captured responses) and
+[routes.js](second%20app/routes.js) (the router that [server.js](server.js) mounts).
+
+### Authentication
+
+Bearer tokens, with no relationship to the on-prem app's cookie/CSRF scheme — separate
+accounts, separate credentials, separate error bodies, no shared state. **Three headers
+carry a request, and they are the only three needed:**
+
+```js
+var url = 'https://<service>.onrender.com/um/api/resources?type=dashboard&category=dashboard&username=&limit=0&name=%25';
+var token = 'PASTE_YOUR_TOKEN_HERE';
+
+fetch(url, {
+  method: 'GET',
+  headers: {
+    accept: 'application/json, text/plain, */*',
+    authorization: 'Bearer ' + token,
+    cookie: 'authCookiePart0=' + token + '; languageCookie=en-US'
+  }
+})
+  .then(function (res) { console.log('status:', res.status); return res.text(); })
+  .then(function (b) { console.log('body:', b); })
+  .catch(function (e) { console.error('fetch error:', e); });
+```
+
+`Authorization` is the credential. The `authCookiePart*` cookie is the same token by
+another route — the real SPA sets it client-side so sibling apps share one session — and
+is accepted on its own, which is what `security: [bearerAuth, authCookie]` in the spec
+means. When both are present, the header wins. The real service chunks the cookie at
+3800 characters and records the count in `authCookieCount`; these tokens fit in one
+part, so `authCookiePart0` alone carries them.
+
+Note that `Cookie` is a forbidden header name in browser `fetch()` — a browser silently
+drops it and sends its own cookies instead. Only a non-browser client (Node, curl,
+Postman) actually transmits a hand-built `Cookie` header. Since the bearer header is
+enough on its own, this does not matter in practice.
+
+### Accounts
+
+Three, seeded and never rotated: the tokens carry an `exp` claim in the year 2100, no
+signature is verified, and nothing expires or refreshes. Run
+`npm run accounts:second-app` to write `second app/ACCOUNTS.txt` with the three headers
+per account, ready to paste. That file holds working tokens, so it is gitignored.
+
+| Account | Role | Org | Purpose in an authorization scan |
+| ------- | ---- | --- | -------------------------------- |
+| `testadmin01` | admin | Studio-Org-A | Owner |
+| `testuser01` | user | Studio-Org-A | Non-owner peer, same org |
+| `testviewer01` | viewer | Studio-Org-B | Low privilege, **different org** |
+
+### Failure codes
+
+| Condition | Status |
+| --------- | ------ |
+| No `Authorization` header and no `authCookiePart0` cookie | `401` |
+| `Authorization` present but not the Bearer scheme | `401` |
+| Token unknown | `401` |
+| Role not permitted on the path, or read-only role on a write | `403` |
+| Object belongs to another org | `403` |
+| Object does not exist | `404` |
+
+Every one of these uses the `UmEnvelope` error shape —
+`{"success": false, "data": null, "correlationId": null, "message": "…"}`. The TAF
+routes answer `400` with their own `{"error": {"code": "VALIDATION_ERROR", …}}` body,
+as the contract specifies.
+
+### Access control
+
+The same three rules as the on-prem app, so both surfaces are probed the same way:
+
+1. **Admin-only paths** — `GET /um/api/auth/groups`, the full RBAC directory, is `403`
+   for `user` and `viewer`.
+2. **Read-only role** — `viewer` gets `403` on every non-GET, whatever the path.
+3. **Org ownership** — the id-bearing TAF paths and `PUT /um/api/resources/{wrrn}`
+   return `403` when the object belongs to another org and `404` when it does not
+   exist, so a probe cannot enumerate ids. `GET /um/api/resources` and
+   `GET /taf/api/v4/projects/test-plans` list only the caller's own org, and
+   `GET /um/api/auth/users/{username}/groups` is restricted to the caller unless the
+   caller is an admin of the target's org.
+
+Org-owned object ids:
+
+| Object    | Studio-Org-A                           | Studio-Org-B                           |
+| --------- | -------------------------------------- | -------------------------------------- |
+| project   | `7b00367e-46fd-4d54-acd7-cc07923d14bb` | `a4e81c72-3f65-4d09-b8a1-77c2e5940db3` |
+| test plan | `0f6ba250-3a07-4858-9aee-1621fcd5392c` | `d1b93f57-6c20-4a88-9e34-08fa5c71b6e2` |
+| dashboard | WRRN ending `dashboard:61ccb06b-…`     | WRRN ending `dashboard:2c7f4b81-…`     |
+
+### Endpoints
+
+| Method | Path | Params | admin | viewer |
+| ------ | ---- | ------ | ----- | ------ |
+| POST | `/um/api/auth/users/signIn/verification` | JSON: `refreshToken` | no token required | no token required |
+| GET  | `/um/api/auth/users/me/profile` | — | ✅ | ✅ |
+| GET  | `/um/api/auth/users/me/profile/picture` | — | ✅ | ✅ |
+| GET  | `/um/api/auth/users/me/roles` | — | ✅ | ✅ |
+| PUT  | `/um/api/auth/users/me/change/setting` | JSON: `settings[]` | ✅ | ⛔ 403 |
+| GET  | `/um/api/auth/users/{username}/groups` | — | ✅ own org | ✅ self only |
+| GET  | `/um/api/auth/groups` | `limit` | ✅ | ⛔ 403 |
+| GET  | `/um/api/components` | `name` | ✅ | ✅ |
+| GET  | `/um/api/components/categories` | — | ✅ | ✅ |
+| GET  | `/um/api/resources` | `type`, `category`, `username`, `limit`, `name`, `toolId` | ✅ | ✅ own org |
+| POST | `/um/api/resources` | JSON: `name`, `category`, `type`, `componentWrrn`, `groupId`, … | ✅ | ⛔ 403 |
+| PUT  | `/um/api/resources/{wrrn}` | JSON: `description`, `uniqueData` | ✅ own org | ⛔ 403 |
+| GET  | `/portal/api/component-management/components` | — | ✅ | ✅ |
+| GET  | `/taf/api/v3/projects` | `offset`, `count`, `filter`, `column`, `direction`, `getFromTAF` | ✅ | ✅ own org |
+| POST | `/taf/api/v3/projects` | JSON: `name`, `projectCode`, … | ✅ | ⛔ 403 |
+| GET  | `/taf/api/v3/projects/{projectId}` | `getFromTAF` | ✅ own org | ✅ own org |
+| GET  | `/taf/api/v3/projects/{projectId}/test-plans/{testPlanId}/executions` | `executionStatus`, `offset`, `count`, `filter`, `column`, `direction` | ✅ own org | ✅ own org |
+| GET  | `/taf/api/v3/executions` | same as above | ✅ | ✅ |
+| GET  | `/taf/api/v4/projects/test-plans` | `skip`, `limit`, `filter`, `column`, `direction` | ✅ | ✅ own org |
+| GET  | `/taf/api/v4/projects/{projectId}/plugins` | — | ✅ own org | ✅ own org |
+| POST | `/taf/api/v4/projects/{projectId}/test-plans` | JSON: `name`, `projectId`, … | ✅ own org | ⛔ 403 |
+| GET  | `/taf/api/v4/projects/{projectId}/test-plans/{testPlanId}` | — | ✅ own org | ✅ own org |
+
+`POST /um/api/auth/users/signIn/verification` is the one operation the spec marks
+`security: []` — the refresh token in the body is the credential. Each account's bearer
+token doubles as its own refresh token, so the call is a self-refresh that returns the
+same JWT along with the session bundle.
+
+Responses reproduce the platform's quirks rather than tidying them: three different
+envelopes across the three services, `200` (not `201`) from `POST /um/api/resources`,
+a `Location` header on the TAF create that omits the `/taf/api` gateway prefix, and
+dashboard timestamps as epoch-millisecond **strings**. Writes are not persisted — a
+create or update returns the object it would have made and leaves the fixtures alone,
+so a repeated scan sees the same state. Conditional requests work: `ETag` is set on
+every response and a matching `If-None-Match` answers `304`, which is what over half
+the captured traffic did.
+
+### Try it locally
+
+```bash
+npm start                            # same server, both apps
+npm run accounts:second-app          # writes second app/ACCOUNTS.txt
+
+TOKEN=$(grep -m1 'authorization: Bearer' "second app/ACCOUNTS.txt" | sed 's/.*Bearer //')
+
+curl -H 'accept: application/json, text/plain, */*' -H "authorization: Bearer $TOKEN" \
+  "http://localhost:8443/um/api/resources?type=dashboard&category=dashboard&username=&limit=0&name=%25"
+
+curl -H "authorization: Bearer $TOKEN" http://localhost:8443/taf/api/v3/projects
+curl -H "authorization: Bearer $TOKEN" http://localhost:8443/um/api/auth/groups          # 200 for admin
+curl http://localhost:8443/um/api/resources                                              # 401, no token
+```
+
 ## Deploy on Render
 
 1. Push this directory to a Git repo (GitHub/GitLab).
@@ -166,9 +336,13 @@ curl -H "$ADMIN" -H "$AJAX" http://localhost:8443/api/fm/alarm_list             
 3. Render injects `PORT`; the server binds to it. No other environment variables
    are needed.
 
-Your base URL becomes `https://<service>.onrender.com`. To point a client that
-was written against the spec at the deployment, change only the `servers[0].url`
-in [onpremtest.yaml](onpremtest.yaml) — the paths below it are unchanged.
+Your base URL becomes `https://<service>.onrender.com`, and it serves both apps. To
+point a client that was written against either spec at the deployment, change only
+`servers[0].url` — in [onpremtest.yaml](onpremtest.yaml) for the on-prem app, or in
+[second app/second_app_oas.yaml](second%20app/second_app_oas.yaml) for the second one.
+The paths below it are unchanged in both. Keep the two files separate: they describe
+two different surfaces and merging them would defeat the isolation the split exists
+for.
 
 Note: the free plan sleeps after inactivity, so the first request after an idle
 period takes a few seconds.

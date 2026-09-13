@@ -1,12 +1,13 @@
 {
   "name": "onprem-mock-api",
   "version": "1.0.0",
-  "description": "Mock implementation of the onpremtest.yaml OpenAPI surface with static admin/user session cookies",
+  "description": "Mock implementations of two separate OpenAPI surfaces - onpremtest.yaml (platform cookie/CSRF auth) and second app/second_app_oas.yaml (bearer auth) - served from one host on non-overlapping paths",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "accounts": "node scripts/accounts.js"
+    "accounts": "node scripts/accounts.js",
+    "accounts:second-app": "node \"scripts/accounts-second-app.js\""
   },
   "engines": {
     "node": ">=18.0.0"

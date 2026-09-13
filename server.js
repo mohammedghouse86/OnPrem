@@ -21,6 +21,15 @@ const {
   randomToken,
 } = require('./auth');
 
+/**
+ * The second app — the Wind River Studio surface described by
+ * `second app/second_app_oas.yaml`. It is a self-contained router with its own
+ * bearer-token authentication, mounted on the same host and base path as this
+ * one but on prefixes (`/um/api`, `/portal/api`, `/taf/api`) that do not appear
+ * in `onpremtest.yaml`. Anything outside those prefixes it hands straight back.
+ */
+const studio = require('./second app/routes');
+
 const app = express();
 const PORT = process.env.PORT || 8443;
 
@@ -36,6 +45,17 @@ app.use((req, res, next) => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Second app
+ *
+ * Mounted first and ahead of every middleware below, so a Studio request never
+ * passes through the on-prem app's cookie/CSRF checks and an on-prem request
+ * never passes through Studio's bearer check. The two share a host; they share
+ * no credential, no session store and no error vocabulary.
+ * ------------------------------------------------------------------ */
+
+app.use(studio);
+
+/* ------------------------------------------------------------------ *
  * Unauthenticated helpers (not part of the OpenAPI surface)
  * ------------------------------------------------------------------ */
 
@@ -44,6 +64,13 @@ app.get('/', (req, res) => {
     service: 'MoonSun on-prem mock API',
     spec: 'onpremtest.yaml (OpenAPI 3.0.3)',
     openapi: '/openapi.yaml',
+    also_hosted_here: {
+      service: 'Wind River Studio mock API (second app)',
+      spec: 'second app/second_app_oas.yaml (OpenAPI 3.0.3)',
+      openapi: '/second-app-openapi.yaml',
+      prefixes: studio.PREFIXES,
+      authentication: 'Bearer token — separate accounts, separate credentials, see the spec.',
+    },
     authentication: {
       how: 'GET /auth/login/ for the CSRF cookie, then POST /auth/login/ for the session cookie.',
       mandatory_headers: {
@@ -94,6 +121,19 @@ app.get('/openapi.yaml', (req, res) => {
   const specPath = path.join(__dirname, 'onpremtest.yaml');
   if (!fs.existsSync(specPath)) {
     return res.status(404).json({ error: 'not_found', message: 'onpremtest.yaml is not bundled with this deployment.' });
+  }
+  res.type('text/yaml').send(fs.readFileSync(specPath, 'utf8'));
+});
+
+app.get('/second-app-openapi.yaml', (req, res) => {
+  // Deliberately a separate file and a separate URL: the two specs describe two
+  // different surfaces and must never be merged into one document.
+  const specPath = path.join(__dirname, 'second app', 'second_app_oas.yaml');
+  if (!fs.existsSync(specPath)) {
+    return res.status(404).json({
+      error: 'not_found',
+      message: 'second_app_oas.yaml is not bundled with this deployment.',
+    });
   }
   res.type('text/yaml').send(fs.readFileSync(specPath, 'utf8'));
 });

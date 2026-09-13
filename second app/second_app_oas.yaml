@@ -1,0 +1,1472 @@
+openapi: 3.0.3
+
+info:
+  title: Wind River Studio (dast) — Observed API
+  version: "1.0.0-observed"
+  description: |
+    OpenAPI description of the Wind River Studio `dast` environment, reverse-engineered
+    from three browser HAR captures (`dast.wrstudio.cloud.har`, `dast.wrstudio.cloud1.har`,
+    `dast.wrstudio.cloud2.har` — 147 requests total, captured 2026-09-08/09).
+
+    **Scope:** 20 path items / 22 operations across three microservices behind a single
+    Kong gateway on `dast.wrstudio.cloud`:
+
+    | Service | Prefix | Paths | Ops |
+    |---|---|---|---|
+    | User Management | `/um/api` | 11 | 12 |
+    | Test Automation Framework | `/taf/api` | 8 | 9 |
+    | Portal | `/portal/api` | 1 | 1 |
+
+    **Provenance and limits — read before using this for testing:**
+
+    * This is an *observed* contract, not a published one. Every schema here was derived
+      from actual traffic. Fields never exercised in the capture are absent; optionality,
+      enums and `nullable` flags are inferred from a small number of samples and may be
+      wrong.
+    * The source HARs were **sanitized on export** — Chrome DevTools' default
+      "Export HAR…" strips `Authorization` and `Cookie` — so no credential appears in
+      any capture and JWT values show as `[REDACTED_JWT]`. The security schemes below
+      were therefore recovered from the application's own auth interceptor and cookie
+      service in `main.e705eb3b40d1f153.js`, and corroborated against a known-working
+      request. They are accurate; they simply are not visible in the HARs themselves.
+    * **No secrets are included in this file.** All token fields carry placeholder
+      examples. Resource identifiers (UUIDs, WRRNs, group and role names) are the real
+      values from the capture, retained deliberately so requests can be replayed.
+
+    **Deployment — how to call the mock:**
+
+    The `servers` entry below points at a runnable mock of this surface. A second,
+    unrelated mock (described by `onpremtest.yaml`) is deployed to the *same* host and
+    the *same* base path, so one URL serves both. They do not overlap and they do not
+    share anything:
+
+    * **Paths.** This app answers only under `/um/api`, `/portal/api` and `/taf/api`.
+      No path in the other spec begins with any of those prefixes, so no request is
+      ambiguous and neither spec needs to know about the other.
+    * **Credentials.** This app authenticates with `Authorization: Bearer <token>`
+      (or the equivalent `authCookiePart*` cookie) and nothing else. The other app
+      authenticates with a platform session cookie plus a CSRF header, and nothing
+      else. Neither app's credential is recognised by the other — presenting one on
+      the other's paths fails, which keeps a test run against this spec isolated from
+      a test run against that one.
+
+    Three headers carry every request, and they are the only three needed:
+
+        accept:        application/json, text/plain, */*
+        authorization: Bearer <token>
+        cookie:        authCookiePart0=<token>; languageCookie=en-US
+
+    Three accounts are seeded — an org admin, a non-owner peer in the same org, and a
+    low-privilege account in a different org — so object-level and role-level rules
+    can both be exercised. Their tokens are constants that never rotate and never
+    expire; they are kept out of this file and published separately.
+
+    **Identity provider** (from `/assets/config/config.json` and `/taf/assets/config.json`):
+    Tozny ID (a Keycloak distribution) at `https://tozny.id.dast.wrstudio.cloud`,
+    realm `wrai`, client `wr-studio-sso`.
+
+  contact:
+    name: Derived from HAR capture
+  license:
+    name: Internal use
+
+servers:
+  - url: https://onprem-01yz.onrender.com
+    description: |
+      Mock implementation of this surface. It shares a host and a base path with a
+      second, unrelated mock (`onpremtest.yaml`), which answers on entirely different
+      paths and with entirely different credentials — see **Deployment** above.
+  - url: https://dast.wrstudio.cloud
+    description: dast environment (Kong gateway) — the host the captures came from.
+
+tags:
+  - name: Authentication
+    description: Session establishment and token refresh.
+  - name: User
+    description: Current-user profile, roles, settings and group membership.
+  - name: Groups
+    description: RBAC group directory.
+  - name: Components
+    description: Registered platform components and their categories.
+  - name: Resources
+    description: User-created resources (dashboards etc.) addressed by WRRN.
+  - name: Portal
+    description: Portal component catalogue.
+  - name: TAF Projects
+    description: Test Automation Framework projects (v3).
+  - name: TAF Test Plans
+    description: Test Automation Framework test plans and plugins (v4).
+  - name: TAF Executions
+    description: Test run executions.
+
+# `Authorization: Bearer <jwt>` is the credential every operation requires.
+# Browser traffic additionally carries the chunked `authCookiePart*` cookie holding the
+# same JWT, because the SPA is same-origin and the browser attaches it automatically —
+# it is listed as an alternative below, but whether the gateway accepts the cookie
+# *without* the header has not been tested against a live endpoint.
+security:
+  - bearerAuth: []
+  - authCookie: []
+
+################################################################################
+# PATHS
+################################################################################
+paths:
+
+  # ---------------------------------------------------------------- UM: auth --
+  /um/api/auth/users/signIn/verification:
+    post:
+      tags: [Authentication]
+      summary: Exchange a refresh token for a session
+      operationId: verifySignIn
+      description: |
+        RPC-style SSO verification. Accepts an OIDC refresh token and returns the access
+        JWT together with the full session bundle (user, roles, settings, entitlements).
+
+        Observed 16 times across the capture — the SPA calls this on load and on a timer
+        to keep the access token alive. Note that a non-idempotent `POST` is being used
+        for what is effectively a read/refresh.
+      security: []   # the refresh token in the body is the credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInVerificationRequest'
+      responses:
+        '200':
+          description: Session established.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SessionBundle'
+        '401':
+          $ref: '#/components/responses/UmError'
+
+  /um/api/auth/users/me/profile:
+    get:
+      tags: [User]
+      summary: Get the current user's profile
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: Profile of the authenticated user.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  /um/api/auth/users/me/profile/picture:
+    get:
+      tags: [User]
+      summary: Get the current user's profile picture
+      operationId: getMyProfilePicture
+      description: |
+        Returned `application/json` in every observed call, with `success: false`, because
+        the test user has no picture set. The response media type when a picture *does*
+        exist was not observed and may differ (e.g. `image/*`).
+      responses:
+        '200':
+          description: Picture metadata, or an error envelope when none is set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+              examples:
+                noPicture:
+                  summary: User has no picture (the only observed outcome)
+                  value:
+                    success: false
+                    data: null
+                    message: "error @ getProfilePicture: user does not have a picture"
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  /um/api/auth/users/me/roles:
+    get:
+      tags: [User]
+      summary: List the current user's roles
+      operationId: getMyRoles
+      responses:
+        '200':
+          description: Roles assigned to the authenticated user.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Role'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  /um/api/auth/users/me/change/setting:
+    put:
+      tags: [User]
+      summary: Update the current user's settings
+      operationId: changeMySettings
+      description: |
+        Applies a batch of setting changes. Each entry references a `settingId` and a
+        `settingValueId` from the platform's settings catalogue; the endpoint that lists
+        that catalogue was not exercised in the capture.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeSettingsRequest'
+      responses:
+        '200':
+          description: Settings updated; returns the resolved effective settings.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserSettings'
+
+  /um/api/auth/users/{username}/groups:
+    get:
+      tags: [User, Groups]
+      summary: List a user's group memberships
+      operationId: getUserGroups
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Account username.
+          schema:
+            type: string
+          example: testadmin01
+      responses:
+        '200':
+          description: Groups the user belongs to.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GroupRef'
+              example:
+                success: true
+                message: Group membership obtained successfully
+                data:
+                  - id: 5096263a-3edf-4d93-9cad-b36ab2c09414
+                    name: hive-admin-group
+                  - id: 10c3c4af-5697-4227-83c4-beeca2c235e5
+                    name: taf-admin-group
+                  - id: 9fed1194-53dc-4059-90fb-034253acec10
+                    name: vlab-starter-group
+
+  /um/api/auth/groups:
+    get:
+      tags: [Groups]
+      summary: List all RBAC groups
+      operationId: listGroups
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Page size. `0` was observed and returns all rows.
+          schema:
+            type: integer
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: Paged list of groups.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/UmPage'
+                          - type: object
+                            properties:
+                              rows:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/Group'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  # ---------------------------------------------------------- UM: components --
+  /um/api/components:
+    get:
+      tags: [Components]
+      summary: Search registered components
+      operationId: listComponents
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: Component name filter.
+          schema:
+            type: string
+          example: Portal
+      responses:
+        '200':
+          description: Paged list of components.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/UmPage'
+                          - type: object
+                            properties:
+                              rows:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/Component'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  /um/api/components/categories:
+    get:
+      tags: [Components]
+      summary: List component categories
+      operationId: listComponentCategories
+      responses:
+        '200':
+          description: Flat list of category names.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: string
+              example:
+                success: true
+                message: Components categories obtained successfully
+                data: [home, gallery, mcp, ntf, platformhealth, schedule, tozny, um, vault, vlab, taf]
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  # ----------------------------------------------------------- UM: resources --
+  /um/api/resources:
+    get:
+      tags: [Resources]
+      summary: Search resources
+      operationId: listResources
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string }
+          example: dashboard
+        - name: category
+          in: query
+          schema: { type: string }
+          example: dashboard
+        - name: username
+          in: query
+          description: Owner filter. Empty string was observed (no filter).
+          schema: { type: string }
+          example: ""
+        - name: limit
+          in: query
+          description: Page size. `0` returns all rows.
+          schema: { type: integer, default: 0 }
+          example: 0
+        - name: name
+          in: query
+          description: Name filter; SQL-style `%` wildcard is accepted.
+          schema: { type: string }
+          example: "%"
+        - name: toolId
+          in: query
+          description: Filter by originating tool.
+          schema: { type: string, format: uuid }
+          example: d53ee552-8795-483d-a6e3-f4cae6d3ab98
+      responses:
+        '200':
+          description: Paged list of resources.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/UmPage'
+                          - type: object
+                            properties:
+                              rows:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/Resource'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+    post:
+      tags: [Resources]
+      summary: Register a resource
+      operationId: createResource
+      description: |
+        Creates a resource and returns its WRRN as a bare string in `data`.
+
+        Note two non-REST behaviours observed here: creation returns **200**, not 201
+        (the TAF service returns 201 for its creates), and the success payload shape
+        differs from `PUT /um/api/resources/{wrrn}`, which returns a full object.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResourceRequest'
+      responses:
+        '200':
+          description: Resource registered. `data` is the new WRRN.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: string
+                        description: WRRN of the created resource.
+                      error:
+                        nullable: true
+              example:
+                success: true
+                message: Resource was registered successfully or already exist
+                error: null
+                data: "wrrn::aws:49e44597-8990-4f86-9831-9a4e8b0a1730::WRStudionginstaller:useast2:1f62f9b9-e637-4959-9a62-20dce262b8a2::home:7f49c0f6-4475-44b2-a225-9c63b4ab77b0::dashboard:61ccb06b-025d-4c90-aeb7-62561d7ba4d9"
+        '400':
+          description: |
+            Validation failure. Observed twice in the capture when the SPA sent
+            `groupId: ""`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UmEnvelope'
+              example:
+                success: false
+                data: null
+                correlationId: null
+                message: "groupId must be at least 1 characters // groupId must be a valid UUID"
+
+  /um/api/resources/{wrrn}:
+    parameters:
+      - name: wrrn
+        in: path
+        required: true
+        description: |
+          Wind River Resource Name — a `::`-delimited hierarchical identifier of the form
+          `wrrn::<cloud>:<accountId>::<namespace>:<region>:<locationId>::<componentType>:<componentId>::<resourceType>:<resourceId>`.
+          Must be URL-encoded when placed in a path.
+        schema:
+          type: string
+        example: "wrrn::aws:49e44597-8990-4f86-9831-9a4e8b0a1730::WRStudionginstaller:useast2:1f62f9b9-e637-4959-9a62-20dce262b8a2::home:7f49c0f6-4475-44b2-a225-9c63b4ab77b0::dashboard:61ccb06b-025d-4c90-aeb7-62561d7ba4d9"
+    put:
+      tags: [Resources]
+      summary: Update a resource
+      operationId: updateResource
+      description: |
+        Partial update. Only `description` and `uniqueData` were exercised; other
+        mutable fields may exist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateResourceRequest'
+      responses:
+        '200':
+          description: Updated resource.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Resource'
+                      error:
+                        nullable: true
+
+  # -------------------------------------------------------------- PORTAL API --
+  /portal/api/component-management/components:
+    get:
+      tags: [Portal]
+      summary: List portal components
+      operationId: listPortalComponents
+      description: |
+        Component catalogue that backs the portal launcher. Icons are returned inline as
+        base64 `data:` URIs, which makes responses large.
+      responses:
+        '200':
+          description: Component catalogue.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/UmEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PortalComponent'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  # -------------------------------------------------------------- TAF v3 API --
+  /taf/api/v3/projects:
+    get:
+      tags: [TAF Projects]
+      summary: List projects
+      operationId: listTafProjects
+      parameters:
+        - $ref: '#/components/parameters/TafOffset'
+        - $ref: '#/components/parameters/TafCount'
+        - $ref: '#/components/parameters/TafFilter'
+        - name: column
+          in: query
+          description: Sort column.
+          schema:
+            type: string
+            enum: [modifiedDate, name]
+            default: modifiedDate
+        - $ref: '#/components/parameters/TafDirection'
+        - name: getFromTAF
+          in: query
+          description: Observed always `true`. Purpose not determinable from traffic.
+          schema: { type: boolean, default: true }
+      responses:
+        '200':
+          description: Paged project list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TafV3Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalRows: { type: integer }
+                          projects:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/TafProject'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+    post:
+      tags: [TAF Projects]
+      summary: Create a project
+      operationId: createTafProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTafProjectRequest'
+      responses:
+        '201':
+          description: Project created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TafV3Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TafProject'
+
+  /taf/api/v3/projects/{projectId}:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+    get:
+      tags: [TAF Projects]
+      summary: Get a project
+      operationId: getTafProject
+      parameters:
+        - name: getFromTAF
+          in: query
+          schema: { type: boolean, default: true }
+      responses:
+        '200':
+          description: Project detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TafV3Envelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TafProject'
+
+  /taf/api/v3/projects/{projectId}/test-plans/{testPlanId}/executions:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+      - name: testPlanId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 0f6ba250-3a07-4858-9aee-1621fcd5392c
+    get:
+      tags: [TAF Executions]
+      summary: List executions for a test plan
+      operationId: listTestPlanExecutions
+      parameters:
+        - $ref: '#/components/parameters/ExecutionStatus'
+        - $ref: '#/components/parameters/TafOffset'
+        - $ref: '#/components/parameters/TafCount'
+        - $ref: '#/components/parameters/TafFilter'
+        - name: column
+          in: query
+          schema: { type: string, default: ranDate }
+        - $ref: '#/components/parameters/TafDirection'
+      responses:
+        '200':
+          description: Paged execution list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TafExecutionsResponse'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  /taf/api/v3/executions:
+    get:
+      tags: [TAF Executions]
+      summary: List executions across all projects
+      operationId: listTafExecutions
+      parameters:
+        - $ref: '#/components/parameters/ExecutionStatus'
+        - $ref: '#/components/parameters/TafOffset'
+        - $ref: '#/components/parameters/TafCount'
+        - $ref: '#/components/parameters/TafFilter'
+        - name: column
+          in: query
+          schema: { type: string, default: ranDate }
+        - $ref: '#/components/parameters/TafDirection'
+      responses:
+        '200':
+          description: Paged execution list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TafExecutionsResponse'
+        '304':
+          $ref: '#/components/responses/NotModified'
+
+  # -------------------------------------------------------------- TAF v4 API --
+  /taf/api/v4/projects/test-plans:
+    get:
+      tags: [TAF Test Plans]
+      summary: List test plans across all projects
+      operationId: listAllTestPlans
+      description: |
+        Note this route places the literal segment `test-plans` where
+        `/taf/api/v4/projects/{projectId}/...` places an id. The traffic alone cannot
+        confirm whether the server treats it as a distinct route or as a project id
+        named `test-plans`; it is modelled here as a distinct route because it returned
+        200 with a list payload.
+
+        Uses `skip`/`limit` paging, unlike the v3 endpoints' `offset`/`count`.
+      parameters:
+        - name: skip
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - $ref: '#/components/parameters/TafFilter'
+        - name: column
+          in: query
+          schema: { type: string, default: modifiedDate }
+        - $ref: '#/components/parameters/TafDirection'
+      responses:
+        '200':
+          description: Paged test-plan list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TafTestPlan'
+                  totalRows: { type: integer }
+
+  /taf/api/v4/projects/{projectId}/plugins:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+    get:
+      tags: [TAF Test Plans]
+      summary: List plugins available to a project
+      operationId: listProjectPlugins
+      description: |
+        Observed returning 400 twice because the SPA sent the literal string `null` as
+        `projectId` before a project had been selected.
+      responses:
+        '200':
+          description: Plugin list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      description: Shape unknown — only empty arrays were observed.
+        '400':
+          $ref: '#/components/responses/TafValidationError'
+
+  /taf/api/v4/projects/{projectId}/test-plans:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+    post:
+      tags: [TAF Test Plans]
+      summary: Create a test plan
+      operationId: createTestPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTestPlanRequest'
+      responses:
+        '201':
+          description: |
+            Test plan created. Also returns a `Location` header, observed as
+            `/v4/projects/{projectId}/test-plans/{testPlanId}` — note it omits the
+            `/taf/api` gateway prefix and so is not directly resolvable by the client.
+          headers:
+            Location:
+              description: Path of the created test plan (missing the `/taf/api` prefix).
+              schema: { type: string }
+              example: /v4/projects/7b00367e-46fd-4d54-acd7-cc07923d14bb/test-plans/0f6ba250-3a07-4858-9aee-1621fcd5392c
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TafTestPlan'
+        '400':
+          $ref: '#/components/responses/TafValidationError'
+
+  /taf/api/v4/projects/{projectId}/test-plans/{testPlanId}:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 7b00367e-46fd-4d54-acd7-cc07923d14bb
+      - name: testPlanId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 0f6ba250-3a07-4858-9aee-1621fcd5392c
+    get:
+      tags: [TAF Test Plans]
+      summary: Get a test plan
+      operationId: getTestPlan
+      responses:
+        '200':
+          description: Test plan detail, including its test suites.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/TafTestPlan'
+                      - type: object
+                        properties:
+                          modifiedByUserName: { type: string }
+                          testSuites:
+                            type: array
+                            items:
+                              type: object
+                              description: Shape unknown — only empty arrays were observed.
+        '400':
+          $ref: '#/components/responses/TafValidationError'
+
+################################################################################
+# COMPONENTS
+################################################################################
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Primary credential. The access JWT returned as `data.jwt` from
+        `POST /um/api/auth/users/signIn/verification`, issued by Tozny ID (Keycloak)
+        realm `wrai`, client `wr-studio-sso`.
+
+        The SPA stores it in `localStorage["token"]` and an Angular `HttpInterceptor`
+        attaches it to every outgoing request:
+
+            this.AUTH_HEADER = "Authorization"
+            addAuthenticationToken(req) {
+              const token = this.localStorage.getItem("token");
+              return token
+                ? req.clone({ headers: req.headers.set("Authorization", `Bearer ${token}`) })
+                : req;
+            }
+
+        The interceptor also forces `Content-Type: application/json` on every request
+        — GETs included — unless the caller already set it, or the URL contains
+        `license/newLicense`. That header is what the app sends, not necessarily what
+        the server requires: a working bare `GET` of `/um/api/resources` omits it.
+
+        On `401` the interceptor calls `handleExpiredToken`; on `403` it retries once.
+
+        Against the mock in `servers`, the tokens are static: they are shaped like the
+        access tokens the real realm issues, but no signature is verified and the token
+        is matched by value. They do not rotate and do not expire, so a client can
+        hard-code one. Failures are `401` for a missing, malformed or unknown token and
+        `403` for a token whose account may not reach the path or the object; both use
+        the `UmEnvelope` error shape.
+
+    authCookie:
+      type: apiKey
+      in: cookie
+      name: authCookiePart0
+      description: |
+        Secondary transport for the *same* JWT, set client-side so sibling apps on
+        `*.dast.wrstudio.cloud` (vlab, grafana, kiali, taf) share one session.
+
+        **The cookie is chunked.** The token is split into 3800-character parts, and
+        the part count is stored separately — so `authCookiePart0` alone is only
+        sufficient for a JWT of 3800 characters or fewer:
+
+            authCookieCount   -> number of parts, e.g. "2"
+            authCookiePart0   -> jwt.slice(0, 3800)
+            authCookiePart1   -> jwt.slice(3800, 7600)
+            ...
+            languageCookie    -> UI locale, e.g. "en-US" (not a credential)
+            oidcCookie        -> OIDC handshake state
+
+        Reassembly, from the app's cookie service:
+
+            getAuthCookie() {
+              const n = parseInt(this.cookieService.get("authCookieCount"), 10);
+              let s = "";
+              for (let i = 0; i < n; i++) s += this.cookieService.get(`authCookiePart${i}`) || "";
+              return s;
+            }
+
+        A JWT carrying many roles and entitlements (this environment issues 13 roles
+        and 18 entitlements) can exceed 3800 characters, so check `authCookieCount`
+        and send every part rather than assuming one.
+
+        Note: `Cookie` is a forbidden header name in browser `fetch()`. Setting it from
+        a browser console is silently ignored — the browser attaches its own same-origin
+        cookies instead. Only a non-browser client (Node, curl, Postman) actually sends
+        a hand-built `Cookie` header.
+
+  parameters:
+    # Path parameters are declared inline on each path item rather than referenced
+    # from here: some OpenAPI validators (notably the AMF parser used by the VS Code
+    # OpenAPI extension) do not resolve $ref'd path parameters when checking that every
+    # path-template variable is declared, and report a false "must be defined in the
+    # parameters object" error. Only reusable query parameters live here.
+
+    TafOffset:
+      name: offset
+      in: query
+      schema: { type: integer, default: 0 }
+
+    TafCount:
+      name: count
+      in: query
+      description: Page size. Values 5, 10 and 100 were observed.
+      schema: { type: integer, default: 10 }
+
+    TafFilter:
+      name: filter
+      in: query
+      description: Free-text filter. Only the empty string was observed.
+      schema: { type: string, default: "" }
+
+    TafDirection:
+      name: direction
+      in: query
+      description: Sort direction — `-1` descending, `1` ascending.
+      schema:
+        type: integer
+        enum: [-1, 1]
+        default: -1
+
+    ExecutionStatus:
+      name: executionStatus
+      in: query
+      description: Empty string means no filter.
+      schema:
+        type: string
+        enum: ["", active, completed]
+        default: ""
+
+  responses:
+    NotModified:
+      description: |
+        Not Modified. Returned when the client sends `If-None-Match` matching the
+        current `ETag`; 54 of the 96 captured API requests were conditional.
+
+    UmError:
+      description: Error envelope from the User Management service.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UmEnvelope'
+
+    TafValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TafError'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Request validation failed
+              details:
+                - message: projectId must be a valid UUID
+                  field: params.projectId
+
+  schemas:
+
+    # -------------------------------------------------------------- envelopes --
+    UmEnvelope:
+      type: object
+      description: |
+        Response envelope used by the `/um` and `/portal` services. Note the platform
+        uses three different envelopes — this one, `TafV3Envelope`, and a bare `{data}`
+        object in TAF v4.
+      required: [success]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          nullable: true
+          description: Payload; shape varies per operation.
+        correlationId:
+          type: string
+          nullable: true
+
+    TafV3Envelope:
+      type: object
+      description: Response envelope used by the TAF v3 service.
+      properties:
+        status:
+          type: string
+          example: success
+        data: {}
+        rbacRole:
+          type: string
+          description: Caller's effective role for the requested scope.
+          example: lead
+          enum: [lead, unknown]
+
+    UmPage:
+      type: object
+      description: Pagination wrapper used by `/um` list endpoints.
+      properties:
+        rows:
+          type: array
+          items: {}
+        limit: { type: integer, example: 5 }
+        page: { type: integer, example: 1 }
+        totalRows: { type: integer, example: 1 }
+        totalPage: { type: integer, example: 1 }
+
+    TafError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Request validation failed
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  message: { type: string }
+                  field: { type: string }
+
+    # ------------------------------------------------------------------ auth --
+    SignInVerificationRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          format: password
+          writeOnly: true
+          description: |
+            OIDC refresh token (JWT) issued by Tozny ID. **Placeholder value only** —
+            the real token was redacted from the source capture and must not be
+            committed to this file.
+          example: "<refresh-token>"
+
+    SessionBundle:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/SessionUser'
+        expiry:
+          type: string
+          format: date-time
+          description: Access-token expiry.
+          example: "2026-09-09T00:13:15.000Z"
+        jwt:
+          type: string
+          format: password
+          description: |
+            Access token used to authorize subsequent API calls.
+            **Placeholder value only** — never store a real token in this file.
+          example: "<access-token>"
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        settings:
+          $ref: '#/components/schemas/UserSettings'
+        permissions:
+          type: array
+          items: {}
+          description: Empty in every observed response; element shape unknown.
+        entitlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entitlement'
+        session:
+          type: string
+          format: uuid
+          example: 7d92cb91-895f-44ac-a542-c8cfdcea7880
+        userId:
+          type: string
+          format: uuid
+          example: 02da2ad8-644a-480f-b6d2-ac5a8691d3a9
+        domain:
+          type: string
+          example: dast.wrstudio.cloud
+
+    SessionUser:
+      type: object
+      properties:
+        username:   { type: string, example: testadmin01 }
+        email:      { type: string, format: email, example: testadmin01@windriver.com }
+        firstName:  { type: string, example: test }
+        lastName:   { type: string, example: admin01 }
+        fullName:   { type: string, example: test admin01 }
+        picture:    { type: string, nullable: true }
+        position:   { type: string, nullable: true }
+        location:   { type: string, nullable: true }
+        department: { type: string, nullable: true }
+
+    # ------------------------------------------------------------------ user --
+    UserProfile:
+      type: object
+      properties:
+        userId:                { type: string, format: uuid, example: 02da2ad8-644a-480f-b6d2-ac5a8691d3a9 }
+        username:              { type: string, example: testadmin01 }
+        email:                 { type: string, format: email, example: testadmin01@windriver.com }
+        phoneNumber:           { type: string, nullable: true, example: "" }
+        mobilePhoneNumber:     { type: string, nullable: true }
+        firstName:             { type: string, example: test }
+        lastName:              { type: string, example: admin01 }
+        nickname:              { type: string, nullable: true, example: "" }
+        lastLogin:             { type: string, format: date-time, nullable: true, example: "2026-09-08T16:13:15.535Z" }
+        lastFailedLogin:       { type: string, format: date-time, nullable: true }
+        position:              { type: string, nullable: true }
+        department:            { type: string, nullable: true }
+        location:              { type: string, nullable: true }
+        tenantId:              { type: string, format: uuid, example: cc2bcd01-059e-4eba-95ef-0c57cd98d3f9 }
+        toznyId:               { type: string, format: uuid, example: 83a80e68-0cc3-47bc-82ca-b1786d3625cb }
+        licenseId:             { type: string, format: uuid, nullable: true, example: 80fd3a5a-98fe-49cf-b28e-0c7a2c36a5fd }
+        licenseActionDate:     { type: string, format: date-time, nullable: true, example: "2026-09-01T07:18:16.394Z" }
+        licenseLastAssignDate: { type: string, format: date-time, nullable: true, example: "2026-09-01T07:18:16.394Z" }
+        groups:
+          type: array
+          items: { type: string }
+          example: [hive-admin-group, license-admin-group, platformhealth-admin-group, taf-admin-group, vault-admin-group]
+
+    Role:
+      type: object
+      properties:
+        roleId: { type: string, format: uuid, example: 3730b12e-375d-4016-b6c1-f61caebe678a }
+        name:   { type: string, example: tafAdmin }
+
+    UserSettings:
+      type: object
+      description: Effective settings, returned as strings even for numeric values.
+      properties:
+        dateFormat:       { type: string, example: dd/mm/yyyy }
+        timeFormat:       { type: string, example: "24" }
+        openingApps:      { type: string, example: "1" }
+        timeZone:         { type: string, example: GMT+0000 }
+        theme:            { type: string, example: dark }
+        appCentralOpen:   { type: string, example: "1" }
+        appCentralLayout: { type: string, example: "1" }
+        language:         { type: string, example: en-US }
+
+    ChangeSettingsRequest:
+      type: object
+      required: [settings]
+      properties:
+        settings:
+          type: array
+          items:
+            type: object
+            required: [settingId, settingValueId, settingValue]
+            properties:
+              settingId:      { type: string, format: uuid }
+              settingValueId: { type: string, format: uuid }
+              settingValue:   { type: string }
+      example:
+        settings:
+          - settingId: 47a219a4-a691-4dab-9af1-6895cfd9545b
+            settingValueId: 12bda044-5b9c-4310-857d-7a412fc4165d
+            settingValue: GMT+0000
+          - settingId: f2d39242-ca24-4c4a-a697-ffc40dc365b8
+            settingValueId: 9da91385-133b-41e9-8e0e-ee28bc316ac8
+            settingValue: "24"
+          - settingId: 1eaf9d0b-9fe1-4bc8-84fe-18f767a812ff
+            settingValueId: b1fc5c86-efa9-4c6d-bb4c-92b7deef062c
+            settingValue: dd/mm/yyyy
+          - settingId: 3f507d4d-ff8f-4926-986c-0d0cfc973654
+            settingValueId: 127d990d-819d-43e7-9bb3-9e14c7aedf94
+            settingValue: en-US
+
+    # ---------------------------------------------------------------- groups --
+    GroupRef:
+      type: object
+      properties:
+        id:   { type: string, format: uuid }
+        name: { type: string }
+
+    Group:
+      allOf:
+        - $ref: '#/components/schemas/GroupRef'
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+      example:
+        id: eb49d895-f5d7-4f89-9f2e-261f748f245d
+        name: dfl-lead-group
+        description: null
+
+    # ------------------------------------------------------------ components --
+    Component:
+      type: object
+      properties:
+        id:           { type: string, format: uuid, example: 7f49c0f6-4475-44b2-a225-9c63b4ab77b0 }
+        name:         { type: string, example: Portal }
+        wrrn:         { type: string }
+        description:  { type: string, nullable: true, example: Wind River Studio }
+        url:          { type: string, example: hosted_zone }
+        locationWrrn: { type: string }
+        namespace:    { type: string, example: WRStudio-ng-installer }
+        geographic:   { type: string, example: us-east-2 }
+        environment:  { type: string, example: scales }
+        category:     { type: string, example: home }
+        type:         { type: string, example: home }
+        state:        { type: string, example: ready }
+        uniqueData:
+          type: object
+          additionalProperties: true
+          description: Free-form per-component metadata.
+
+    PortalComponent:
+      type: object
+      properties:
+        id:           { type: string, format: uuid, example: 687ceab0-2c7d-45a7-a529-b38f97fb7e03 }
+        name:         { type: string, example: Linux Build System }
+        url:          { type: string, format: uri, example: https://lxbs.dast.wrstudio.cloud }
+        shortname:    { type: string, example: LXBS }
+        icon:
+          type: string
+          description: Inline `data:image/svg+xml;base64,...` URI.
+        isThirdParty: { type: boolean }
+        isFeature:    { type: boolean }
+        isExternal:   { type: boolean }
+        isFavorite:   { type: boolean }
+
+    Entitlement:
+      type: object
+      description: An application the user is entitled to launch.
+      properties:
+        id:           { type: string, format: uuid, example: 07dbfc5c-0882-4970-9cd9-0d56a49237eb }
+        name:         { type: string, example: GitLab }
+        url:          { type: string, format: uri, example: https://gitlab.dast.wrstudio.cloud }
+        shortName:    { type: string, example: GitLab }
+        isThirdParty: { type: boolean, example: true }
+        isFeature:    { type: boolean, example: false }
+
+    # ------------------------------------------------------------- resources --
+    Resource:
+      type: object
+      properties:
+        wrrn:        { type: string }
+        name:        { type: string, example: test_08_sep }
+        description: { type: string, nullable: true, example: "" }
+        manual:      { type: boolean, example: true }
+        type:        { type: string, example: dashboard }
+        category:    { type: string, example: dashboard }
+        state:       { type: string, example: ready }
+        url:         { type: string, format: uri, example: https://dast.wrstudio.cloud/dashboard }
+        toolId:      { type: string, format: uuid, example: d53ee552-8795-483d-a6e3-f4cae6d3ab98 }
+        rbacRoles:
+          type: array
+          items: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        team:
+          nullable: true
+        component:
+          $ref: '#/components/schemas/ResourceComponent'
+        uniqueData:
+          $ref: '#/components/schemas/DashboardUniqueData'
+
+    ResourceComponent:
+      type: object
+      description: |
+        Embedded parent component. Same fields as `Component` minus `id`, plus
+        `environmentWrrn`.
+      properties:
+        wrrn:            { type: string }
+        name:            { type: string, example: Portal }
+        description:     { type: string, nullable: true }
+        url:             { type: string }
+        namespace:       { type: string, example: WRStudio-ng-installer }
+        geographic:      { type: string, example: us-east-2 }
+        locationWrrn:    { type: string }
+        environmentWrrn: { type: string, example: "wrrn::aws:49e44597-8990-4f86-9831-9a4e8b0a1730" }
+        category:        { type: string, example: home }
+        type:            { type: string, example: home }
+        state:           { type: string, example: ready }
+        uniqueData:
+          type: object
+          additionalProperties: true
+
+    DashboardUniqueData:
+      type: object
+      description: |
+        Free-form resource payload. For `dashboard` resources it carries widget layout
+        and timestamps — note the timestamps are epoch-milliseconds **as strings**,
+        unlike the ISO-8601 dates used elsewhere in the platform.
+      properties:
+        createdDate: { type: string, example: "1788884482306" }
+        updatedDate: { type: string, example: "1788884524997" }
+        widgets:
+          type: array
+          items:
+            type: object
+            description: Shape unknown — only empty arrays were observed.
+      additionalProperties: true
+
+    CreateResourceRequest:
+      type: object
+      required: [name, category, type, componentWrrn, groupId]
+      properties:
+        name:          { type: string, example: test_08_sep }
+        description:   { type: string, example: "" }
+        category:      { type: string, example: dashboard }
+        type:          { type: string, example: dashboard }
+        componentWrrn:
+          type: string
+          description: WRRN of the parent component.
+          example: "wrrn::aws:49e44597-8990-4f86-9831-9a4e8b0a1730::WRStudionginstaller:useast2:1f62f9b9-e637-4959-9a62-20dce262b8a2::home:7f49c0f6-4475-44b2-a225-9c63b4ab77b0"
+        state:         { type: string, example: ready }
+        toolId:        { type: string, format: uuid, example: d53ee552-8795-483d-a6e3-f4cae6d3ab98 }
+        manual:        { type: boolean, example: true }
+        groupId:
+          type: string
+          format: uuid
+          description: |
+            Owning RBAC group. Required and must be a valid UUID — sending an empty
+            string produces the 400 observed in the capture.
+          example: eb49d895-f5d7-4f89-9f2e-261f748f245d
+        url:           { type: string, format: uri, example: https://dast.wrstudio.cloud/dashboard }
+        uniqueData:
+          $ref: '#/components/schemas/DashboardUniqueData'
+
+    UpdateResourceRequest:
+      type: object
+      properties:
+        description: { type: string, example: "" }
+        uniqueData:
+          $ref: '#/components/schemas/DashboardUniqueData'
+
+    # ------------------------------------------------------------------- TAF --
+    TafProject:
+      type: object
+      properties:
+        id:                      { type: string, format: uuid, example: 7b00367e-46fd-4d54-acd7-cc07923d14bb }
+        projectCode:             { type: string, example: "001" }
+        name:                    { type: string, example: test_08_sep }
+        description:             { type: string, nullable: true, example: "" }
+        targetRetention:         { type: string, example: release }
+        targetRetentionDuration: { type: integer, example: 8 }
+        isDeleted:               { type: boolean, example: false }
+        artifactStorage:         { type: string, nullable: true }
+        secretPath:              { type: string, nullable: true }
+        ramResourceName:         { type: string, nullable: true }
+        modifiedByUserName:      { type: string, example: testadmin01 }
+        createdBy:               { type: string, format: email, example: testadmin01@windriver.com }
+        modifiedBy:              { type: string, format: email, example: testadmin01@windriver.com }
+        createdDate:             { type: string, format: date-time, example: "2026-09-08T16:24:43.828Z" }
+        modifiedDate:            { type: string, format: date-time, example: "2026-09-08T16:24:43.828Z" }
+
+    CreateTafProjectRequest:
+      type: object
+      required: [name, projectCode]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Sent as `null` on create.
+        name:                    { type: string, example: test_08_sep }
+        projectCode:             { type: string, example: "001" }
+        description:             { type: string, nullable: true }
+        pipelineId:              { type: string, example: none }
+        targetRetention:         { type: string, example: release }
+        targetRetentionDuration: { type: integer, example: 8 }
+        rbacGroup:
+          type: string
+          description: Name (not id) of the owning RBAC group.
+          example: plm-task-library-viewer-group
+
+    TafTestPlan:
+      type: object
+      properties:
+        id:              { type: string, format: uuid, example: 0f6ba250-3a07-4858-9aee-1621fcd5392c }
+        name:            { type: string, example: test_plan_08_sep }
+        description:     { type: string, nullable: true }
+        projectId:       { type: string, format: uuid, example: 7b00367e-46fd-4d54-acd7-cc07923d14bb }
+        targetRetention: { type: string, example: release }
+        isDisabled:      { type: boolean, example: false }
+        createdBy:       { type: string, format: email, example: testadmin01@windriver.com }
+        modifiedBy:      { type: string, format: email, example: testadmin01@windriver.com }
+        createdDate:     { type: string, format: date-time, example: "2026-09-08T16:25:07.412Z" }
+        modifiedDate:    { type: string, format: date-time, example: "2026-09-08T16:25:07.412Z" }
+
+    CreateTestPlanRequest:
+      type: object
+      required: [name, projectId]
+      properties:
+        testPlanId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Sent as `null` on create.
+        name:            { type: string, example: test_plan_08_sep }
+        description:     { type: string, nullable: true }
+        projectId:       { type: string, format: uuid, example: 7b00367e-46fd-4d54-acd7-cc07923d14bb }
+        targetRetention: { type: string, example: release }
+
+    TafExecutionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/TafV3Envelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                executions:
+                  type: array
+                  items:
+                    type: object
+                    description: |
+                      Shape unknown — every observed response returned an empty array,
+                      so no execution object was ever seen on the wire.
+                totalRows: { type: integer, example: 0 }

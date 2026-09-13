@@ -10,5 +10,6 @@ npm-debug.log*
 StarlingX*.json
 
 # Generated credentials reference — holds working session tokens and passwords.
-# Regenerate locally with `npm run accounts`.
+# Matches both apps: ACCOUNTS.txt at the root and second app/ACCOUNTS.txt.
+# Regenerate locally with `npm run accounts` and `npm run accounts:second-app`.
 ACCOUNTS.txt
