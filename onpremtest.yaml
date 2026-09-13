@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: OnPrem Test API
-  description: 'OpenAPI spec MoonSun. Surface reconstructed from two StarlingX/Horizon
+  description: 'OpenAPI spec MoonSun. Surface reconstructed from two onprem1/Horizon
     dashboard HAR captures (1059 requests, 32 distinct paths) merged with the endpoints
     previously derived from probe/crawl logs. Paths use the trailing-slash form Django
     treats as canonical: the capture shows GET /admin/active_alarms answering 301 to
@@ -16,8 +16,8 @@ info:
     note: Context identifiers captured.
   x-har-capture:
     files:
-    - StarlingX HAR request 1.json
-    - StarlingX HAR request 2.json
+    - onprem1 HAR request 1.json
+    - onprem1 HAR request 2.json
     origin: redacted - internal host
     entries: 1059
     distinctPaths: 32
@@ -26,7 +26,7 @@ servers:
 - url: https://onprem-01yz.onrender.com
   description: Mock implementation of this surface.
 - url: https://onprem.example.internal
-  description: 'Placeholder for the internal StarlingX host the captures came from; the real hostname is not kept in this repo.'
+  description: 'Placeholder for the internal onprem1 host the captures came from; the real hostname is not kept in this repo.'
 security:
 - platformSessionCookie: []
   csrfTokenHeader: []
@@ -37,7 +37,7 @@ paths:
       tags:
       - Other
       summary: Dashboard root
-      description: 'Redirects to the default dashboard. Observed in the StarlingX HAR captures.'
+      description: 'Redirects to the default dashboard. Observed in the onprem1 HAR captures.'
       operationId: get_root
       responses:
         '302':
@@ -71,7 +71,7 @@ paths:
       summary: Log in
       description: 'Authenticates against the dashboard and establishes the session. Answers 302 to / on success.
         fake_email and fake_password are browser autofill decoys sent empty by the UI. Observed in the
-        StarlingX HAR captures.'
+        onprem1 HAR captures.'
       operationId: post_auth_login
       security:
       - csrfTokenHeader: []
@@ -123,7 +123,7 @@ paths:
       tags:
       - Admin
       summary: Admin dashboard
-      description: 'Landing page of the admin dashboard. Observed in the StarlingX HAR captures.'
+      description: 'Landing page of the admin dashboard. Observed in the onprem1 HAR captures.'
       operationId: get_admin
       parameters:
       - name: tab
@@ -156,7 +156,7 @@ paths:
       - Admin
       summary: Active alarms
       description: 'Requesting this path without the trailing slash answers 301 to the slashed form. Observed in the
-        StarlingX HAR captures.'
+        onprem1 HAR captures.'
       operationId: get_admin_active_alarms
       responses:
         '200':
@@ -174,7 +174,7 @@ paths:
       tags:
       - Admin
       summary: Data networks
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_admin_datanets
       parameters:
       - name: loaded
@@ -199,7 +199,7 @@ paths:
       tags:
       - Admin
       summary: Events
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_admin_events
       responses:
         '200':
@@ -217,7 +217,7 @@ paths:
       tags:
       - Admin
       summary: Event suppression
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_admin_events_suppression
       responses:
         '200':
@@ -236,7 +236,7 @@ paths:
       - Admin
       summary: Host topology page
       description: 'HTML page. The data behind it is polled from /admin/host_topology/json. Observed in the
-        StarlingX HAR captures.'
+        onprem1 HAR captures.'
       operationId: get_admin_host_topology
       responses:
         '200':
@@ -257,7 +257,7 @@ paths:
       description: 'Polled on a timer by the topology page. The capture shows the cache-buster sent as a dynamic
         query KEY with an empty value (?1700000000000=), not as a named parameter with a value. The _
         parameter below stands in for that key, which OpenAPI cannot express directly. This is the one
-        path observed answering 200 without a trailing slash. Observed in the StarlingX HAR captures.'
+        path observed answering 200 without a trailing slash. Observed in the onprem1 HAR captures.'
       operationId: get_admin_host_topology_json
       parameters:
       - name: _
@@ -283,7 +283,7 @@ paths:
       tags:
       - Admin
       summary: Software management
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_admin_software_management
       parameters:
       - name: loaded
@@ -328,7 +328,7 @@ paths:
       - Admin
       summary: Storage overview
       description: 'Present in the capture, though the recorded request was aborted before a response arrived.
-        Observed in the StarlingX HAR captures.'
+        Observed in the onprem1 HAR captures.'
       operationId: get_admin_storage_overview
       parameters:
       - name: loaded
@@ -353,7 +353,7 @@ paths:
       tags:
       - Admin
       summary: System configuration
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_admin_system_config
       parameters:
       - name: loaded
@@ -380,7 +380,7 @@ paths:
       - Fault Management
       summary: List alarms
       description: 'Highest-traffic endpoint in the capture (405 requests) — polled continuously by the UI. Observed
-        in the StarlingX HAR captures.'
+        in the onprem1 HAR captures.'
       operationId: get_api_fm_alarm_list
       responses:
         '200':
@@ -416,7 +416,7 @@ paths:
       tags:
       - Fault Management
       summary: List event suppressions
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_api_fm_events_suppression_list
       parameters:
       - name: include_unsuppressed
@@ -442,7 +442,7 @@ paths:
       tags:
       - Identity
       summary: List Keystone roles
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_api_keystone_roles
       responses:
         '200':
@@ -461,7 +461,7 @@ paths:
       - Other
       summary: Evaluate policy rules
       description: 'Asks the dashboard whether the current session satisfies a set of Keystone policy rules. Each
-        rule is a [service, action] pair. Observed in the StarlingX HAR captures.'
+        rule is a [service, action] pair. Observed in the onprem1 HAR captures.'
       operationId: post_api_policy
       requestBody:
         required: true
@@ -489,7 +489,7 @@ paths:
       tags:
       - API
       summary: Application settings
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_api_settings
       responses:
         '200':
@@ -507,7 +507,7 @@ paths:
       tags:
       - Identity
       summary: Projects list
-      description: 'The identity dashboard index lists projects (tenants). Observed in the StarlingX HAR captures.'
+      description: 'The identity dashboard index lists projects (tenants). Observed in the onprem1 HAR captures.'
       operationId: get_identity
       parameters:
       - name: loaded
@@ -531,7 +531,7 @@ paths:
       tags:
       - Identity
       summary: Filter projects
-      description: 'Submits the project list filter. Answers 302 back to /identity/. Observed in the StarlingX HAR
+      description: 'Submits the project list filter. Answers 302 back to /identity/. Observed in the onprem1 HAR
         captures.'
       operationId: post_identity
       requestBody:
@@ -586,7 +586,7 @@ paths:
       - Identity
       summary: Update project
       description: 'Multi-step project edit wizard. Observed steps: update_members, update_group_members. The only
-        endpoint pair in the surface that takes an object id in the path. Observed in the StarlingX HAR
+        endpoint pair in the surface that takes an object id in the path. Observed in the onprem1 HAR
         captures.'
       operationId: get_identity_project_update
       parameters:
@@ -623,7 +623,7 @@ paths:
       tags:
       - Identity
       summary: Users list
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_identity_users
       parameters:
       - name: loaded
@@ -647,7 +647,7 @@ paths:
       tags:
       - Identity
       summary: Filter users
-      description: 'Submits the user list filter. Answers 302 back to /identity/users/. Observed in the StarlingX
+      description: 'Submits the user list filter. Answers 302 back to /identity/users/. Observed in the onprem1
         HAR captures.'
       operationId: post_identity_users
       requestBody:
@@ -683,7 +683,7 @@ paths:
       tags:
       - Identity
       summary: User detail
-      description: 'Per-user page with overview, role assignment and group tabs. Observed in the StarlingX HAR
+      description: 'Per-user page with overview, role assignment and group tabs. Observed in the onprem1 HAR
         captures.'
       operationId: get_identity_user_detail
       parameters:
@@ -805,7 +805,7 @@ paths:
       tags:
       - Identity
       summary: Groups list
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_identity_groups
       responses:
         '200':
@@ -862,7 +862,7 @@ paths:
       tags:
       - Identity
       summary: Roles list
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_identity_roles
       responses:
         '200':
@@ -880,7 +880,7 @@ paths:
       tags:
       - Identity
       summary: Application credentials
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_identity_application_credentials
       parameters:
       - name: loaded
@@ -905,7 +905,7 @@ paths:
       tags:
       - Project
       summary: API access
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_project_api_access
       parameters:
       - name: loaded
@@ -948,7 +948,7 @@ paths:
       tags:
       - Other
       summary: UI header fragment
-      description: 'HTML fragment refreshed by the UI (35 requests in the capture). Observed in the StarlingX HAR
+      description: 'HTML fragment refreshed by the UI (35 requests in the capture). Observed in the onprem1 HAR
         captures.'
       operationId: get_header
       responses:
@@ -967,7 +967,7 @@ paths:
       tags:
       - Other
       summary: User settings page
-      description: 'Observed in the StarlingX HAR captures.'
+      description: 'Observed in the onprem1 HAR captures.'
       operationId: get_settings
       responses:
         '200':
@@ -980,13 +980,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /i18n/js/horizon+openstack_dashboard+starlingx_dashboard+starlingx_dashboard.dashboards.dc_admin/:
+  /i18n/js/horizon+openstack_dashboard+onprem1_dashboard+onprem1_dashboard.dashboards.dc_admin/:
     get:
       tags:
       - Other
       summary: Javascript translation catalog
       description: 'Django javascript_catalog view. The path segment is the literal list of translation domains.
-        Observed in the StarlingX HAR captures.'
+        Observed in the onprem1 HAR captures.'
       operationId: get_i18n_js_catalog
       responses:
         '200':
