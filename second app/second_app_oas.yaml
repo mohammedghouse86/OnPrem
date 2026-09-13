@@ -1,7 +1,7 @@
 openapi: 3.0.3
 
 info:
-  title: Wind River Studio (dast) — Observed API
+  title: Onprem second app
   version: "1.0.0-observed"
   description: |
     OpenAPI description
@@ -432,7 +432,7 @@ paths:
         in: path
         required: true
         description: |
-          Wind River Resource Name — a `::`-delimited hierarchical identifier of the form
+          onprem2 Resource Name — a `::`-delimited hierarchical identifier of the form
           `wrrn::<cloud>:<accountId>::<namespace>:<region>:<locationId>::<componentType>:<componentId>::<resourceType>:<resourceId>`.
           Must be URL-encoded when placed in a path.
         schema:
@@ -1079,7 +1079,7 @@ components:
       type: object
       properties:
         username:   { type: string, example: testadmin01 }
-        email:      { type: string, format: email, example: testadmin01@windriver.com }
+        email:      { type: string, format: email, example: testadmin01@onprem2.com }
         firstName:  { type: string, example: test }
         lastName:   { type: string, example: admin01 }
         fullName:   { type: string, example: test admin01 }
@@ -1094,7 +1094,7 @@ components:
       properties:
         userId:                { type: string, format: uuid, example: 02da2ad8-644a-480f-b6d2-ac5a8691d3a9 }
         username:              { type: string, example: testadmin01 }
-        email:                 { type: string, format: email, example: testadmin01@windriver.com }
+        email:                 { type: string, format: email, example: testadmin01@onprem2.com }
         phoneNumber:           { type: string, nullable: true, example: "" }
         mobilePhoneNumber:     { type: string, nullable: true }
         firstName:             { type: string, example: test }
@@ -1189,7 +1189,7 @@ components:
         id:           { type: string, format: uuid, example: 7f49c0f6-4475-44b2-a225-9c63b4ab77b0 }
         name:         { type: string, example: Portal }
         wrrn:         { type: string }
-        description:  { type: string, nullable: true, example: Wind River Studio }
+        description:  { type: string, nullable: true, example: onprem2 Studio }
         url:          { type: string, example: hosted_zone }
         locationWrrn: { type: string }
         namespace:    { type: string, example: WRStudio-ng-installer }
@@ -1340,8 +1340,8 @@ components:
         secretPath:              { type: string, nullable: true }
         ramResourceName:         { type: string, nullable: true }
         modifiedByUserName:      { type: string, example: testadmin01 }
-        createdBy:               { type: string, format: email, example: testadmin01@windriver.com }
-        modifiedBy:              { type: string, format: email, example: testadmin01@windriver.com }
+        createdBy:               { type: string, format: email, example: testadmin01@onprem2.com }
+        modifiedBy:              { type: string, format: email, example: testadmin01@onprem2.com }
         createdDate:             { type: string, format: date-time, example: "2026-09-08T16:24:43.828Z" }
         modifiedDate:            { type: string, format: date-time, example: "2026-09-08T16:24:43.828Z" }
 
@@ -1374,8 +1374,8 @@ components:
         projectId:       { type: string, format: uuid, example: 7b00367e-46fd-4d54-acd7-cc07923d14bb }
         targetRetention: { type: string, example: release }
         isDisabled:      { type: boolean, example: false }
-        createdBy:       { type: string, format: email, example: testadmin01@windriver.com }
-        modifiedBy:      { type: string, format: email, example: testadmin01@windriver.com }
+        createdBy:       { type: string, format: email, example: testadmin01@onprem2.com }
+        modifiedBy:      { type: string, format: email, example: testadmin01@onprem2.com }
         createdDate:     { type: string, format: date-time, example: "2026-09-08T16:25:07.412Z" }
         modifiedDate:    { type: string, format: date-time, example: "2026-09-08T16:25:07.412Z" }
 
